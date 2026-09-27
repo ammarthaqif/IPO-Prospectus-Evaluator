@@ -1,0 +1,51 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy to Vercel
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Typecheck & Lint
+        run: npm run lint
+
+      - name: Build Application
+        run: npm run build
+        env:
+          VITE_APP_NAME: "Remix VanguardIPO"
+
+      - name: Deploy to Vercel Production
+        uses: amondnet/vercel-action@v25
+        if: env.VERCEL_TOKEN != ''
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deployment Instructions Notice
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "::notice title=Vercel Secrets Required::To automatically deploy on push via this GitHub Action, add VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID in GitHub Repository Settings -> Secrets and variables -> Actions. Alternatively, connect this repository directly in the Vercel Dashboard for zero-config Git deployments."
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

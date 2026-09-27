@@ -1,0 +1,8 @@
+{
+  "name": "Remix VanguardIPO - Prospectus Analytics \u0026 Risk Intelligence",
+  "description": "Institutional fund manager platform for IPO prospectus evaluation, financial metrics visualization, industry benchmark comparisons, AI sentiment \u0026 regulatory red flag analysis, and customizable PDF reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
