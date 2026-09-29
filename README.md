@@ -1,4 +1,4 @@
-# Remix VanguardIPO - Prospectus Analytics & Risk Intelligence
+# VanguardIPO - Prospectus Analytics & Risk Intelligence
 
 An institutional fund manager platform for automated IPO prospectus evaluation, financial metrics extraction, industry benchmark comparisons, AI sentiment & regulatory red flag analysis, and downloadable PDF reports.
 
@@ -79,9 +79,8 @@ Continuous integration is pre-configured in `.github/workflows/ci.yml`:
 
 ## 👤 Author & Credits
 
-- **Lead Engineer**: Ammar Thaqif
-- **Contact**: `ammarthaqif.ar@gmail.com`
-- **Application**: Remix VanguardIPO - Prospectus Analytics & Risk Intelligence
+- **Author & Credits**: Ammar Thaqif (`ammarthaqif.ar@gmail.com`)
+- **Application**: VanguardIPO - Prospectus Analytics & Risk Intelligence
 
 ---
 
