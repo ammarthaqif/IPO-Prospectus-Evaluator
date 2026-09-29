@@ -45,7 +45,7 @@ export const AboutPlatformModal: React.FC<AboutPlatformModalProps> = ({
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                VanguardIPO Intelligence Platform
+                IPO Prospectus Evaluator
               </h2>
               <p className="text-xs text-slate-400">
                 Institutional Due Diligence & Multimodal Prospectus Analytics
@@ -133,7 +133,7 @@ export const AboutPlatformModal: React.FC<AboutPlatformModalProps> = ({
                   Platform Purpose & Architecture
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  <strong>VanguardIPO</strong> was engineered specifically for institutional fund managers, investment committee members, and private equity equity research teams. It automates the extraction and synthesis of statutory Initial Public Offering (IPO) prospectuses across Bursa Malaysia, SEC Form S-1, and international exchanges.
+                  <strong>IPO Prospectus Evaluator</strong> was engineered specifically for institutional fund managers, investment committee members, and private equity equity research teams. It automates the extraction and synthesis of statutory Initial Public Offering (IPO) prospectuses across Bursa Malaysia, SEC Form S-1, and international exchanges.
                 </p>
               </div>
 

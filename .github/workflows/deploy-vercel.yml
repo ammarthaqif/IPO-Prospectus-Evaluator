@@ -35,7 +35,7 @@ jobs:
       - name: Build Application
         run: npm run build
         env:
-          VITE_APP_NAME: "VanguardIPO"
+          VITE_APP_NAME: "IPO Prospectus Evaluator"
 
       - name: Deploy to Vercel Production
         uses: amondnet/vercel-action@v25

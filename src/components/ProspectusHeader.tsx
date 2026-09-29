@@ -69,7 +69,7 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="font-bold text-base sm:text-lg text-white tracking-tight">VanguardIPO</span>
+                  <span className="font-bold text-base sm:text-lg text-white tracking-tight">IPO Prospectus Evaluator</span>
                   <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                     Institutional
                   </span>

@@ -1,4 +1,4 @@
-# VanguardIPO - Prospectus Analytics & Risk Intelligence
+# IPO Prospectus Evaluator - Analytics & Risk Intelligence
 
 An institutional fund manager platform for automated IPO prospectus evaluation, financial metrics extraction, industry benchmark comparisons, AI sentiment & regulatory red flag analysis, and downloadable PDF reports.
 
@@ -80,7 +80,7 @@ Continuous integration is pre-configured in `.github/workflows/ci.yml`:
 ## 👤 Author & Credits
 
 - **Author & Credits**: Ammar Thaqif (`ammarthaqif.ar@gmail.com`)
-- **Application**: VanguardIPO - Prospectus Analytics & Risk Intelligence
+- **Application**: IPO Prospectus Evaluator - Analytics & Risk Intelligence
 
 ---
 

@@ -364,7 +364,7 @@ export const PdfReportGenerator: React.FC<PdfReportGeneratorProps> = ({ dossier 
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184);
-      doc.text('CONFIDENTIAL - Strictly for Institutional Investment Committee Review only. Powered by VanguardIPO Intelligence.', 14, 285);
+      doc.text('CONFIDENTIAL - Strictly for Institutional Investment Committee Review only. Powered by IPO Prospectus Evaluator.', 14, 285);
 
       doc.save(`${(dossier.companyName || 'IPO').replace(/\s+/g, '_')}_IPO_Memo.pdf`);
     } catch (e: any) {
@@ -836,7 +836,7 @@ export const PdfReportGenerator: React.FC<PdfReportGeneratorProps> = ({ dossier 
 
             {/* Legal Footnote */}
             <div className="text-[9px] text-slate-400 font-mono text-center pt-4 border-t border-slate-200">
-              CONFIDENTIAL • VanguardIPO Institutional Intelligence Platform • Strictly for internal asset management use
+              CONFIDENTIAL • IPO Prospectus Evaluator • Strictly for internal asset management use
             </div>
 
           </div>

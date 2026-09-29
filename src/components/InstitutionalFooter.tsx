@@ -30,7 +30,7 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({ onOpen
             {/* Left: Branding & Developer Credit */}
             <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-1 sm:gap-3">
               <div>
-                <span className="font-semibold text-slate-300">VanguardIPO Intelligence</span>
+                <span className="font-semibold text-slate-300">IPO Prospectus Evaluator</span>
                 <span className="hidden sm:inline mx-2 text-slate-700">·</span>
                 <span className="text-slate-400">Institutional Fund Manager IPO Analytics</span>
               </div>
@@ -92,7 +92,7 @@ export const InstitutionalFooter: React.FC<InstitutionalFooterProps> = ({ onOpen
             <div className="flex items-center gap-3">
               <span>Confidential Investment Committee Use</span>
               <span className="text-slate-700" aria-hidden="true">·</span>
-              <span>© {new Date().getFullYear()} VanguardIPO Analytics</span>
+              <span>© {new Date().getFullYear()} IPO Prospectus Evaluator</span>
             </div>
           </div>
 
