@@ -12,11 +12,13 @@ import {
   Building,
   ArrowRight,
   FileCheck,
-  Check
+  Check,
+  Cloud
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
 import { scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from '../data/defaultProspectus';
 import { checkDuplicateProspectus, DuplicateCheckResult } from '../utils/dossierStorage';
+import { checkCloudDuplicate } from '../services/firebase';
 
 interface UploadProspectusModalProps {
   isOpen: boolean;
@@ -553,7 +555,20 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
         );
 
         if (postExtractionDup.isDuplicate && postExtractionDup.matchedDossier) {
-          setErrorMsg(`Duplicate evaluation blocked: The prospectus belongs to "${postExtractionDup.matchedDossier.companyName}" (${postExtractionDup.matchedDossier.registrationNo}), which is already evaluated in the platform. Duplicate evaluations are not permitted.`);
+          setErrorMsg(`Duplicate evaluation blocked: The prospectus belongs to "${postExtractionDup.matchedDossier.companyName}" (${postExtractionDup.matchedDossier.registrationNo}), which is already evaluated in the platform. Duplicate entries into the cloud database are not permitted.`);
+          setIsLoading(false);
+          return;
+        }
+
+        // Verify against Firestore cloud database as well
+        const cloudDup = await checkCloudDuplicate({
+          companyName: aiData.companyName || companyName,
+          registrationNo: aiData.registrationNo,
+          fileName: extractedPdfInfo?.filename || (selectedFiles.length > 0 ? selectedFiles[0].name : undefined),
+        });
+
+        if (cloudDup.isDuplicate && cloudDup.matchedDossier) {
+          setErrorMsg(`Duplicate evaluation blocked: The prospectus for "${cloudDup.matchedDossier.companyName}" (${cloudDup.matchedDossier.registrationNo}) is already stored in Cloud storage. Duplicate entries into the cloud database are not permitted.`);
           setIsLoading(false);
           return;
         }
@@ -1010,6 +1025,14 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
                 <span>CloudNexus AI SaaS (NASDAQ IPO)</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
+            </div>
+          </div>
+
+          {/* Cloud Database Sharing Notice */}
+          <div className="flex items-center gap-2.5 p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs text-cyan-300">
+            <Cloud className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div className="text-[11px] leading-relaxed">
+              <span className="font-semibold text-cyan-200">Cloud Shared Database Active:</span> Any evaluated prospectus is immediately stored in Google Cloud Firestore and made instantly available to all other users in real time. Duplicate entries are blocked automatically.
             </div>
           </div>
 

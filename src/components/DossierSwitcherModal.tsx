@@ -15,7 +15,8 @@ import {
   DollarSign,
   Trash2,
   RotateCcw,
-  FileCheck2
+  FileCheck2,
+  Cloud
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
 
@@ -28,6 +29,8 @@ interface DossierSwitcherModalProps {
   onOpenUploadModal: () => void;
   onDeleteDossier?: (id: string) => void;
   onResetDefaults?: () => void;
+  isCloudLive?: boolean;
+  cloudDossiersCount?: number;
 }
 
 export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
@@ -39,6 +42,8 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
   onOpenUploadModal,
   onDeleteDossier,
   onResetDefaults,
+  isCloudLive = true,
+  cloudDossiersCount,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,8 +93,14 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                   {availableDossiers.length} Loaded
                 </span>
+                {isCloudLive && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Cloud Shared ({cloudDossiersCount || availableDossiers.length} Live)
+                  </span>
+                )}
               </div>
-              <p className="text-xs text-slate-400">Select an issuer to switch all due diligence modules, or evaluate a new prospectus</p>
+              <p className="text-xs text-slate-400">All prospectuses uploaded by any user are synchronized across the cloud in real-time with duplicate prevention.</p>
             </div>
           </div>
 
@@ -189,6 +200,11 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                       {!['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
                           <FileCheck2 className="w-3 h-3 text-indigo-400" /> Custom Evaluated
+                        </span>
+                      )}
+                      {(dossier.isCloudShared || !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id)) && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-mono" title="Persisted in Cloud Firestore and available to all users">
+                          <Cloud className="w-3 h-3 text-cyan-400" /> Cloud Shared
                         </span>
                       )}
                     </div>

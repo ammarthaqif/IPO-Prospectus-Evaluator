@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "prospectusDossier": {
+      "title": "Prospectus Dossier",
+      "description": "Comprehensive institutional evaluation dossier for an IPO prospectus shared across all platform users",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique slug identifier for the dossier"
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Official legal name of the issuer company"
+        },
+        "registrationNo": {
+          "type": "string",
+          "description": "Company registration number or business identifier"
+        },
+        "normalizedCompanyName": {
+          "type": "string",
+          "description": "Normalized company name for duplicate detection"
+        },
+        "normalizedRegistrationNo": {
+          "type": "string",
+          "description": "Normalized registration number for duplicate detection"
+        },
+        "sector": {
+          "type": "string",
+          "description": "Primary industry sector"
+        },
+        "subSector": {
+          "type": "string",
+          "description": "Detailed sub-sector specialisation"
+        },
+        "listingMarket": {
+          "type": "string",
+          "description": "Target listing exchange and market board"
+        },
+        "sourceFileName": {
+          "type": "string",
+          "description": "Original PDF filename uploaded by the user"
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "ISO timestamp when the dossier was uploaded and shared"
+        },
+        "uploaderEmail": {
+          "type": "string",
+          "description": "Email or identifier of the user who contributed the evaluation"
+        }
+      },
+      "required": ["id", "companyName", "listingMarket"]
+    }
+  },
+  "firestore": {
+    "/prospectusDossiers/{dossierId}": {
+      "schema": "prospectusDossier",
+      "description": "Publicly shared library of evaluated IPO prospectuses accessible in real-time to all users"
+    }
+  }
+}

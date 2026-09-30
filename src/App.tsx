@@ -8,7 +8,7 @@ import { PdfReportGenerator } from './components/PdfReportGenerator';
 import { ProspectusDocumentViewer } from './components/ProspectusDocumentViewer';
 import { UploadProspectusModal } from './components/UploadProspectusModal';
 import { InstitutionalFooter } from './components/InstitutionalFooter';
-import { goldLiProspectus, stratusGlobalProspectus } from './data/defaultProspectus';
+import { stratusGlobalProspectus, goldLiProspectus } from './data/defaultProspectus';
 import { ProspectusDossier } from './types';
 import { 
   loadStoredDossiers, 
@@ -17,11 +17,20 @@ import {
   saveActiveDossierId, 
   deleteStoredDossier, 
   resetDossiersToDefaults,
-  checkDuplicateProspectus
+  checkDuplicateProspectus,
+  DEFAULT_DOSSIERS
 } from './utils/dossierStorage';
+import { 
+  subscribeToCloudDossiers, 
+  saveProspectusToCloud, 
+  seedInitialCloudDossiers, 
+  checkCloudDuplicate 
+} from './services/firebase';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [isCloudLive, setIsCloudLive] = useState<boolean>(true);
+  const [cloudCount, setCloudCount] = useState<number>(0);
   
   // Lazy initialize dossiers from localStorage so all uploaded dossiers persist across refreshes on Vercel
   const [dossiers, setDossiers] = useState<ProspectusDossier[]>(() => {
@@ -41,14 +50,41 @@ export default function App() {
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
 
-  // Background sync with server if running in fullstack mode
+  // Background real-time sync with Google Cloud Firestore and server
   useEffect(() => {
+    // 1. Seed initial baseline default dossiers to Cloud Firestore if not present
+    seedInitialCloudDossiers(DEFAULT_DOSSIERS).catch(() => {});
+
+    // 2. Real-time subscription to Cloud Firestore:
+    // Whenever ANY user anywhere uploads/evaluates an IPO prospectus,
+    // this listener fires and syncs with all other users instantly!
+    const unsubscribe = subscribeToCloudDossiers(
+      (cloudList) => {
+        if (cloudList && cloudList.length > 0) {
+          setIsCloudLive(true);
+          setCloudCount(cloudList.length);
+          setDossiers((prev) => {
+            const cloudIds = new Set(cloudList.map((c) => c.id));
+            const localOnly = prev.filter((p) => !cloudIds.has(p.id));
+            const merged = [...cloudList, ...localOnly];
+            saveStoredDossiers(merged);
+            return merged;
+          });
+        }
+      },
+      (err) => {
+        console.warn('[Firebase Cloud Sync notice, using local offline authority]:', err);
+        setIsCloudLive(false);
+      }
+    );
+
+    // 3. Background sync with express backend if available
     fetch('/api/dossiers')
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
         if (data && data.success && Array.isArray(data.dossiers) && data.dossiers.length > 0) {
-          setDossiers(prev => {
-            const existingIds = new Set(prev.map(d => d.id));
+          setDossiers((prev) => {
+            const existingIds = new Set(prev.map((d) => d.id));
             const newServerItems = data.dossiers.filter((sd: ProspectusDossier) => !existingIds.has(sd.id));
             if (newServerItems.length > 0) {
               const merged = [...newServerItems, ...prev];
@@ -59,9 +95,11 @@ export default function App() {
           });
         }
       })
-      .catch(() => {
-        // Offline / serverless cold-start: local storage remains authority
-      });
+      .catch(() => {});
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const handleSelectDossier = (dossier: ProspectusDossier) => {
@@ -76,8 +114,8 @@ export default function App() {
     }
   };
 
-  const handleEvaluationComplete = (newDossier: ProspectusDossier) => {
-    // Defense: verify not duplicate before inserting
+  const handleEvaluationComplete = async (newDossier: ProspectusDossier) => {
+    // Defense: verify not duplicate in local memory before inserting
     const dupCheck = checkDuplicateProspectus(
       {
         companyName: newDossier.companyName,
@@ -94,18 +132,47 @@ export default function App() {
       return;
     }
 
+    // Defense: verify not duplicate in Cloud Firestore
+    const cloudDup = await checkCloudDuplicate(
+      {
+        companyName: newDossier.companyName,
+        registrationNo: newDossier.registrationNo,
+        fileName: newDossier.sourceFileName,
+      },
+      newDossier.id
+    );
+
+    if (cloudDup.isDuplicate && cloudDup.matchedDossier && cloudDup.matchedDossier.id !== newDossier.id) {
+      handleSelectDossier(cloudDup.matchedDossier);
+      setActiveTab('dashboard');
+      return;
+    }
+
+    // Stamp with Cloud Shared metadata
+    const sharedDossier: ProspectusDossier = {
+      ...newDossier,
+      isCloudShared: true,
+      cloudSharedAt: new Date().toISOString(),
+      uploaderEmail: 'community-analyst',
+    };
+
     // Persist new dossier permanently into state and localStorage
-    const updated = [newDossier, ...dossiers.filter(d => d.id !== newDossier.id)];
+    const updated = [sharedDossier, ...dossiers.filter((d) => d.id !== sharedDossier.id)];
     setDossiers(updated);
     saveStoredDossiers(updated);
-    handleSelectDossier(newDossier);
+    handleSelectDossier(sharedDossier);
     setActiveTab('dashboard');
+
+    // Store in Cloud Firestore so all other users can view it immediately!
+    saveProspectusToCloud(sharedDossier).catch((err) => {
+      console.warn('[Cloud upload notice]', err);
+    });
 
     // Sync with serverless / express backend if available
     fetch('/api/dossiers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newDossier),
+      body: JSON.stringify(sharedDossier),
     }).catch(() => {});
   };
 
@@ -138,6 +205,8 @@ export default function App() {
         onOpenUploadModal={() => setIsUploadModalOpen(true)}
         onDeleteDossier={handleDeleteDossier}
         onResetDefaults={handleResetDefaults}
+        isCloudLive={isCloudLive}
+        cloudDossiersCount={cloudCount}
       />
 
       {/* Main Analysis Viewport */}

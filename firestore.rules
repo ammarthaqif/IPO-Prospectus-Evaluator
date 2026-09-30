@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Shared public IPO prospectus dossiers library accessible to all users
+    match /prospectusDossiers/{dossierId} {
+      allow read: if true;
+      allow create: if request.resource.data.id == dossierId
+                    && request.resource.data.companyName is string
+                    && request.resource.data.companyName.size() > 0;
+      allow update: if request.resource.data.id == dossierId
+                    && request.resource.data.companyName is string;
+      allow delete: if false;
+    }
+
+    // Health check and connection validation collection
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

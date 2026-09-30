@@ -1892,18 +1892,55 @@ function handleGetDossiers(_req: Request, res: Response) {
   return res.json({ success: true, dossiers: serverDossiersCache });
 }
 
+function normalizeNameServer(name: string): string {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\b(sdn\s+bhd|bhd|berhad|incorporated|inc|corporation|corp|limited|ltd|llc|plc|group|holdings|holding|co|company)\b/gi, '')
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+function normalizeRegServer(reg: string): string {
+  if (!reg) return '';
+  return reg.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+}
+
 function handleSaveDossier(req: Request, res: Response) {
   const newDossier = req.body;
-  if (!newDossier || !newDossier.id) {
+  if (!newDossier || !newDossier.id || !newDossier.companyName) {
     return res.status(400).json({ success: false, error: 'Invalid dossier payload' });
   }
+
+  // Exact ID match: update existing
   const exists = serverDossiersCache.find(d => d.id === newDossier.id);
   if (exists) {
     serverDossiersCache = serverDossiersCache.map(d => d.id === exists.id ? { ...exists, ...newDossier } : d);
-    return res.json({ success: true, message: 'Dossier updated', dossier: exists });
+    return res.json({ success: true, message: 'Dossier updated in cloud cache', dossier: exists });
   }
+
+  // Duplicate audit: check if already exists by company name or registration number
+  const candidateNormName = normalizeNameServer(newDossier.companyName);
+  const candidateNormReg = normalizeRegServer(newDossier.registrationNo || '');
+
+  const duplicate = serverDossiersCache.find(d => {
+    if (d.id === newDossier.id) return false;
+    if (candidateNormName && normalizeNameServer(d.companyName) === candidateNormName) return true;
+    if (candidateNormReg && candidateNormReg.length >= 5 && normalizeRegServer(d.registrationNo) === candidateNormReg) return true;
+    return false;
+  });
+
+  if (duplicate) {
+    return res.status(409).json({ 
+      success: false, 
+      isDuplicate: true, 
+      error: `Duplicate entry rejected: A dossier for "${duplicate.companyName}" (${duplicate.registrationNo}) already exists.`,
+      matchedDossier: duplicate
+    });
+  }
+
   serverDossiersCache = [newDossier, ...serverDossiersCache];
-  return res.json({ success: true, message: 'Dossier saved', count: serverDossiersCache.length });
+  return res.json({ success: true, message: 'Dossier stored in cloud cache', count: serverDossiersCache.length });
 }
 
 function handleDeleteDossier(req: Request, res: Response) {

@@ -30,6 +30,8 @@ interface ProspectusHeaderProps {
   onOpenUploadModal: () => void;
   onDeleteDossier?: (id: string) => void;
   onResetDefaults?: () => void;
+  isCloudLive?: boolean;
+  cloudDossiersCount?: number;
 }
 
 export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
@@ -41,6 +43,8 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
   onOpenUploadModal,
   onDeleteDossier,
   onResetDefaults,
+  isCloudLive = true,
+  cloudDossiersCount,
 }) => {
   const [isDossierSwitcherOpen, setIsDossierSwitcherOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -76,6 +80,10 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
                   <span className="font-bold text-base sm:text-lg text-white tracking-tight">IPO Prospectus Evaluator</span>
                   <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-1.5 sm:px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                     Institutional
+                  </span>
+                  <span className="hidden xl:inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Connected to Google Cloud Firestore. All uploaded prospectuses are shared with all users in real-time.">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Cloud Shared ({cloudDossiersCount || availableDossiers.length})
                   </span>
                 </div>
                 <p className="text-[10px] sm:text-xs text-slate-400 font-mono hidden xs:block">
@@ -187,6 +195,8 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
         onOpenUploadModal={onOpenUploadModal}
         onDeleteDossier={onDeleteDossier}
         onResetDefaults={onResetDefaults}
+        isCloudLive={isCloudLive}
+        cloudDossiersCount={cloudDossiersCount}
       />
 
       {/* About Platform, Methodology & Developer Profile Modal */}

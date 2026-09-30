@@ -167,6 +167,11 @@ export interface ProspectusDossier {
   sourceFileName?: string;
   evaluatedAt?: string;
   isCustomUpload?: boolean;
+  isCloudShared?: boolean;
+  uploaderEmail?: string;
+  cloudSharedAt?: string;
+  normalizedCompanyName?: string;
+  normalizedRegistrationNo?: string;
 
   // Extended dynamic fields
   fundManagerVerdict?: FundManagerVerdict;
