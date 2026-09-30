@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
-import { scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from './src/data/defaultProspectus.ts';
+import { goldLiProspectus, scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from './src/data/defaultProspectus.ts';
 
 dotenv.config();
 
@@ -1886,7 +1886,7 @@ Provide an institutional-grade, structured answer with key data points, risk ass
 }
 
 // Server in-memory dossier persistence cache
-let serverDossiersCache: any[] = [stratusGlobalProspectus, scaSolutionsProspectus, sampleSaaSProspectus];
+let serverDossiersCache: any[] = [goldLiProspectus, stratusGlobalProspectus, scaSolutionsProspectus, sampleSaaSProspectus];
 
 function handleGetDossiers(_req: Request, res: Response) {
   return res.json({ success: true, dossiers: serverDossiersCache });
@@ -1908,7 +1908,7 @@ function handleSaveDossier(req: Request, res: Response) {
 
 function handleDeleteDossier(req: Request, res: Response) {
   const { id } = req.params;
-  const defaultIds = ['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'];
+  const defaultIds = ['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'];
   if (defaultIds.includes(id)) {
     return res.status(400).json({ success: false, error: 'Cannot delete default sample dossiers' });
   }

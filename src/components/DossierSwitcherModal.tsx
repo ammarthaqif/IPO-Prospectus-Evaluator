@@ -171,6 +171,11 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                           <Check className="w-3 h-3" /> Active In Workspace
                         </span>
                       )}
+                      {dossier.id === 'gold-li-2026' && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                          ACE Market IPO (Johor Property Developer)
+                        </span>
+                      )}
                       {dossier.id === 'stratus-global-2026' && (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
                           Main Market IPO (Semiconductor AMHS)
@@ -181,7 +186,7 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                           ACE / Main Market (M&E)
                         </span>
                       )}
-                      {!['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
+                      {!['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
                           <FileCheck2 className="w-3 h-3 text-indigo-400" /> Custom Evaluated
                         </span>
@@ -216,7 +221,7 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                       {dossier.fundManagerVerdict?.recommendation || 'OVERWEIGHT'}
                     </span>
 
-                    {onDeleteDossier && !['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
+                    {onDeleteDossier && !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -297,7 +302,7 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span>Preserved across page refreshes</span>
             </div>
-            {onResetDefaults && availableDossiers.some(d => !['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(d.id)) && (
+            {onResetDefaults && availableDossiers.some(d => !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(d.id)) && (
               <>
                 <span className="text-slate-700">•</span>
                 <button

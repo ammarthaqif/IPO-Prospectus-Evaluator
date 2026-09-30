@@ -1,4 +1,5 @@
 import type { ProspectusDossier } from '../types.ts';
+export { goldLiProspectus } from './goldLiProspectus.ts';
 
 export const scaSolutionsProspectus: ProspectusDossier = {
   id: 'sca-solutions-2025',

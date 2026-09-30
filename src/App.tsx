@@ -8,7 +8,7 @@ import { PdfReportGenerator } from './components/PdfReportGenerator';
 import { ProspectusDocumentViewer } from './components/ProspectusDocumentViewer';
 import { UploadProspectusModal } from './components/UploadProspectusModal';
 import { InstitutionalFooter } from './components/InstitutionalFooter';
-import { stratusGlobalProspectus } from './data/defaultProspectus';
+import { goldLiProspectus, stratusGlobalProspectus } from './data/defaultProspectus';
 import { ProspectusDossier } from './types';
 import { 
   loadStoredDossiers, 
@@ -36,7 +36,7 @@ export default function App() {
       const found = initialList.find(d => d.id === savedActiveId);
       if (found) return found;
     }
-    return initialList[0] || stratusGlobalProspectus;
+    return initialList[0] || goldLiProspectus;
   });
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);

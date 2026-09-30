@@ -971,12 +971,22 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => {
+                  onSelectSample('gold-li-2026');
+                  onClose();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-semibold text-amber-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>Gold Li Holdings Berhad (ACE Market Property IPO)</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => {
                   onSelectSample('stratus-global-2026');
                   onClose();
                 }}
                 className="px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-xs font-semibold text-emerald-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Stratus Global Holdings Berhad (Main Market AMHS IPO)</span>
                 <ArrowRight className="w-3 h-3" />
               </button>

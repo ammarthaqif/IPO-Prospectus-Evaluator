@@ -1,10 +1,16 @@
 import { ProspectusDossier } from '../types';
-import { stratusGlobalProspectus, scaSolutionsProspectus, sampleSaaSProspectus } from '../data/defaultProspectus';
+import { 
+  goldLiProspectus,
+  stratusGlobalProspectus, 
+  scaSolutionsProspectus, 
+  sampleSaaSProspectus 
+} from '../data/defaultProspectus';
 
 const DOSSIERS_STORAGE_KEY = 'ipo_evaluator_dossiers_v2';
 const ACTIVE_ID_STORAGE_KEY = 'ipo_evaluator_active_dossier_id_v2';
 
 export const DEFAULT_DOSSIERS: ProspectusDossier[] = [
+  goldLiProspectus,
   stratusGlobalProspectus,
   scaSolutionsProspectus,
   sampleSaaSProspectus,
