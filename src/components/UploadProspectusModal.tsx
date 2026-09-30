@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   X, 
   UploadCloud, 
   Sparkles, 
   FileText, 
   AlertCircle, 
+  AlertTriangle,
+  ShieldAlert,
   CheckCircle, 
   RefreshCw,
   Building,
@@ -14,12 +16,14 @@ import {
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
 import { scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from '../data/defaultProspectus';
+import { checkDuplicateProspectus, DuplicateCheckResult } from '../utils/dossierStorage';
 
 interface UploadProspectusModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEvaluationComplete: (newDossier: ProspectusDossier) => void;
   onSelectSample: (id: string) => void;
+  existingDossiers?: ProspectusDossier[];
 }
 
 async function safeReadJsonResponse(response: Response): Promise<any> {
@@ -308,6 +312,7 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
   onClose,
   onEvaluationComplete,
   onSelectSample,
+  existingDossiers = [],
 }) => {
   const [activeMode, setActiveMode] = useState<'pdf' | 'text'>('pdf');
   const [companyName, setCompanyName] = useState('');
@@ -321,6 +326,19 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
   const [extractedPdfInfo, setExtractedPdfInfo] = useState<{ filename: string; charCount: number; partsCount: number; fileDetails?: ExtractedFileDetail[] } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Real-time duplicate prospectus detection against existing library
+  const duplicateCheck: DuplicateCheckResult = useMemo(() => {
+    if (!existingDossiers || existingDossiers.length === 0) return { isDuplicate: false };
+    return checkDuplicateProspectus(
+      {
+        companyName: companyName.trim(),
+        fileName: selectedFiles.length > 0 ? selectedFiles[0].name : undefined,
+        textSnippet: prospectusText,
+      },
+      existingDossiers
+    );
+  }, [companyName, selectedFiles, prospectusText, existingDossiers]);
 
   // Cycle loading steps for visual feedback
   React.useEffect(() => {
@@ -446,6 +464,12 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
       return;
     }
 
+    // Pre-flight duplicate check against loaded dossiers
+    if (duplicateCheck.isDuplicate && duplicateCheck.matchedDossier) {
+      setErrorMsg(`Duplicate evaluation blocked: "${duplicateCheck.matchedDossier.companyName}" (${duplicateCheck.matchedDossier.registrationNo}) has already been evaluated. Duplicate evaluations are not permitted.`);
+      return;
+    }
+
     setIsLoading(true);
     setErrorMsg(null);
 
@@ -515,6 +539,23 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
         if (!aiData) {
           console.log('[Client-side fallback] Generating complete prospectus dossier directly...');
           aiData = parseProspectusClientHeuristically(rawText, companyName);
+        }
+
+        // Post-extraction verification: Ensure parsed entity doesn't match an already evaluated dossier
+        const postExtractionDup = checkDuplicateProspectus(
+          {
+            companyName: aiData.companyName || companyName,
+            registrationNo: aiData.registrationNo,
+            fileName: extractedPdfInfo?.filename || (selectedFiles.length > 0 ? selectedFiles[0].name : undefined),
+            textSnippet: rawText,
+          },
+          existingDossiers
+        );
+
+        if (postExtractionDup.isDuplicate && postExtractionDup.matchedDossier) {
+          setErrorMsg(`Duplicate evaluation blocked: The prospectus belongs to "${postExtractionDup.matchedDossier.companyName}" (${postExtractionDup.matchedDossier.registrationNo}), which is already evaluated in the platform. Duplicate evaluations are not permitted.`);
+          setIsLoading(false);
+          return;
         }
       } else {
         throw new Error('Please provide prospectus text or upload a readable PDF document.');
@@ -859,6 +900,9 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
             benchmarks: benchmarks,
           },
         ],
+        sourceFileName: extractedPdfInfo?.filename || (selectedFiles.length > 0 ? selectedFiles[0].name : undefined),
+        evaluatedAt: new Date().toISOString(),
+        isCustomUpload: true,
       };
 
       onEvaluationComplete(newDossier);
@@ -972,6 +1016,48 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
               className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:border-indigo-500 outline-none text-xs"
             />
           </div>
+
+          {/* Duplicate Prospectus Alert Banner */}
+          {duplicateCheck.isDuplicate && duplicateCheck.matchedDossier && (
+            <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/50 text-amber-200 space-y-2.5 animate-in fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">Duplicate Prospectus Detected</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">Already Evaluated</span>
+                    </div>
+                    <p className="text-xs text-amber-200/90 leading-relaxed">
+                      {duplicateCheck.reason || `A dossier for "${duplicateCheck.matchedDossier.companyName}" already exists in your workspace.`}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-amber-400/90 pt-0.5">
+                      <span>Company: <strong className="text-white">{duplicateCheck.matchedDossier.companyName}</strong></span>
+                      <span>•</span>
+                      <span>Reg: {duplicateCheck.matchedDossier.registrationNo}</span>
+                      <span>•</span>
+                      <span>Market: {duplicateCheck.matchedDossier.listingMarket}</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectSample(duplicateCheck.matchedDossier!.id);
+                    onClose();
+                  }}
+                  className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer self-start sm:self-center"
+                >
+                  <span>Switch to Existing Dossier</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="text-[11px] text-amber-300/80 border-t border-amber-500/20 pt-2 flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                <span>Multiple evaluations of the same prospectus are restricted to preserve portfolio audit history and prevent duplicated records.</span>
+              </div>
+            </div>
+          )}
 
           {/* PDF Drag & Drop Zone (if activeMode === 'pdf') */}
           {activeMode === 'pdf' && (
@@ -1165,10 +1251,20 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
           </button>
           <button
             onClick={handleRunEvaluation}
-            disabled={isLoading || isParsingPdf || (!prospectusText.trim() && selectedFiles.length === 0)}
-            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-2 transition-all shadow-md shadow-indigo-600/30 cursor-pointer"
+            disabled={isLoading || isParsingPdf || duplicateCheck.isDuplicate || (!prospectusText.trim() && selectedFiles.length === 0)}
+            className={`px-5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
+              duplicateCheck.isDuplicate
+                ? 'bg-amber-900/60 border border-amber-500/50 text-amber-300 cursor-not-allowed opacity-90'
+                : 'bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white shadow-indigo-600/30 cursor-pointer'
+            }`}
+            title={duplicateCheck.isDuplicate ? 'Duplicate prospectus already evaluated and present in library' : undefined}
           >
-            {isLoading ? (
+            {duplicateCheck.isDuplicate ? (
+              <>
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+                <span>Duplicate Prospectus (Already Evaluated)</span>
+              </>
+            ) : isLoading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin text-indigo-300" />
                 <span className="animate-pulse">

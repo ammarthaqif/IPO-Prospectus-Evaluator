@@ -28,6 +28,8 @@ interface ProspectusHeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenUploadModal: () => void;
+  onDeleteDossier?: (id: string) => void;
+  onResetDefaults?: () => void;
 }
 
 export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
@@ -37,6 +39,8 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
   activeTab,
   setActiveTab,
   onOpenUploadModal,
+  onDeleteDossier,
+  onResetDefaults,
 }) => {
   const [isDossierSwitcherOpen, setIsDossierSwitcherOpen] = useState(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -181,6 +185,8 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
         availableDossiers={availableDossiers}
         onSelectDossier={onSelectDossier}
         onOpenUploadModal={onOpenUploadModal}
+        onDeleteDossier={onDeleteDossier}
+        onResetDefaults={onResetDefaults}
       />
 
       {/* About Platform, Methodology & Developer Profile Modal */}

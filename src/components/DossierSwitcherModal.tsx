@@ -12,7 +12,10 @@ import {
   Sparkles,
   BarChart3,
   Calendar,
-  DollarSign
+  DollarSign,
+  Trash2,
+  RotateCcw,
+  FileCheck2
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
 
@@ -23,6 +26,8 @@ interface DossierSwitcherModalProps {
   availableDossiers: ProspectusDossier[];
   onSelectDossier: (dossier: ProspectusDossier) => void;
   onOpenUploadModal: () => void;
+  onDeleteDossier?: (id: string) => void;
+  onResetDefaults?: () => void;
 }
 
 export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
@@ -32,6 +37,8 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
   availableDossiers,
   onSelectDossier,
   onOpenUploadModal,
+  onDeleteDossier,
+  onResetDefaults,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -174,6 +181,11 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                           ACE / Main Market (M&E)
                         </span>
                       )}
+                      {!['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+                          <FileCheck2 className="w-3 h-3 text-indigo-400" /> Custom Evaluated
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-400 flex flex-wrap items-center gap-2">
                       <span className="font-mono text-slate-300">{dossier.registrationNo}</span>
@@ -181,10 +193,18 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                       <span>{dossier.listingMarket}</span>
                       <span>•</span>
                       <span className="text-indigo-300 font-medium">{dossier.sector}</span>
+                      {dossier.sourceFileName && (
+                        <>
+                          <span>•</span>
+                          <span className="text-slate-500 text-[11px] font-mono truncate max-w-[200px]" title={dossier.sourceFileName}>
+                            {dossier.sourceFileName}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  {/* Fund Stance Badge */}
+                  {/* Fund Stance Badge & Delete Action */}
                   <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                     <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold tracking-wider ${
                       dossier.fundManagerVerdict?.recommendation === 'OVERWEIGHT'
@@ -195,6 +215,23 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                     }`}>
                       {dossier.fundManagerVerdict?.recommendation || 'OVERWEIGHT'}
                     </span>
+
+                    {onDeleteDossier && !['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Remove custom prospectus dossier "${dossier.companyName}" from your workspace library?`)) {
+                            onDeleteDossier(dossier.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        title="Delete evaluated dossier"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
                     <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
                   </div>
                 </div>
@@ -255,9 +292,28 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
 
         {/* Footer info & Quick Switch tip */}
         <div className="p-3.5 sm:p-4 border-t border-slate-800 bg-slate-950/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>Click any dossier to dynamically update all 6 analytical modules</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Preserved across page refreshes</span>
+            </div>
+            {onResetDefaults && availableDossiers.some(d => !['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(d.id)) && (
+              <>
+                <span className="text-slate-700">•</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Reset workspace to standard default dossiers? Custom evaluated dossiers will be cleared.')) {
+                      onResetDefaults();
+                    }
+                  }}
+                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3 text-slate-400" />
+                  <span>Reset Defaults</span>
+                </button>
+              </>
+            )}
           </div>
           <div className="font-mono text-[11px]">
             Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">ESC</kbd> to return to active analysis

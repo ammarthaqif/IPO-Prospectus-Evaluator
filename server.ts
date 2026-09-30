@@ -1885,8 +1885,42 @@ Provide an institutional-grade, structured answer with key data points, risk ass
   }
 }
 
+// Server in-memory dossier persistence cache
+let serverDossiersCache: any[] = [stratusGlobalProspectus, scaSolutionsProspectus, sampleSaaSProspectus];
+
+function handleGetDossiers(_req: Request, res: Response) {
+  return res.json({ success: true, dossiers: serverDossiersCache });
+}
+
+function handleSaveDossier(req: Request, res: Response) {
+  const newDossier = req.body;
+  if (!newDossier || !newDossier.id) {
+    return res.status(400).json({ success: false, error: 'Invalid dossier payload' });
+  }
+  const exists = serverDossiersCache.find(d => d.id === newDossier.id);
+  if (exists) {
+    serverDossiersCache = serverDossiersCache.map(d => d.id === exists.id ? { ...exists, ...newDossier } : d);
+    return res.json({ success: true, message: 'Dossier updated', dossier: exists });
+  }
+  serverDossiersCache = [newDossier, ...serverDossiersCache];
+  return res.json({ success: true, message: 'Dossier saved', count: serverDossiersCache.length });
+}
+
+function handleDeleteDossier(req: Request, res: Response) {
+  const { id } = req.params;
+  const defaultIds = ['stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'];
+  if (defaultIds.includes(id)) {
+    return res.status(400).json({ success: false, error: 'Cannot delete default sample dossiers' });
+  }
+  serverDossiersCache = serverDossiersCache.filter(d => d.id !== id);
+  return res.json({ success: true, message: 'Dossier deleted' });
+}
+
 // Wire endpoints to router with both /api and root prefixes for universal Vercel compatibility
 apiRouter.get('/health', handleHealth);
+apiRouter.get('/dossiers', handleGetDossiers);
+apiRouter.post('/dossiers', handleSaveDossier);
+apiRouter.delete('/dossiers/:id', handleDeleteDossier);
 apiRouter.post('/parse-pdf', handlePdfUpload, handleParsePdf);
 apiRouter.get('/industry-averages', handleIndustryAverages);
 apiRouter.post('/upload-and-evaluate-pdf', handlePdfUpload, handleUploadAndEvaluatePdf);
@@ -1910,6 +1944,9 @@ apiRouter.post('/', handlePdfUpload, async (req: Request, res: Response, next: e
 
 // Direct mounting on app as well
 app.get('/api/health', handleHealth);
+app.get('/api/dossiers', handleGetDossiers);
+app.post('/api/dossiers', handleSaveDossier);
+app.delete('/api/dossiers/:id', handleDeleteDossier);
 app.post('/api/parse-pdf', handlePdfUpload, handleParsePdf);
 app.get('/api/industry-averages', handleIndustryAverages);
 app.post('/api/upload-and-evaluate-pdf', handlePdfUpload, handleUploadAndEvaluatePdf);

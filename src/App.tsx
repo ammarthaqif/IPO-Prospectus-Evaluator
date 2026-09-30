@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProspectusHeader } from './components/ProspectusHeader';
 import { DashboardOverview } from './components/DashboardOverview';
 import { FinancialMetricsView } from './components/FinancialMetricsView';
@@ -8,30 +8,121 @@ import { PdfReportGenerator } from './components/PdfReportGenerator';
 import { ProspectusDocumentViewer } from './components/ProspectusDocumentViewer';
 import { UploadProspectusModal } from './components/UploadProspectusModal';
 import { InstitutionalFooter } from './components/InstitutionalFooter';
-import { scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from './data/defaultProspectus';
+import { stratusGlobalProspectus } from './data/defaultProspectus';
 import { ProspectusDossier } from './types';
+import { 
+  loadStoredDossiers, 
+  saveStoredDossiers, 
+  loadActiveDossierId, 
+  saveActiveDossierId, 
+  deleteStoredDossier, 
+  resetDossiersToDefaults,
+  checkDuplicateProspectus
+} from './utils/dossierStorage';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [dossiers, setDossiers] = useState<ProspectusDossier[]>([
-    stratusGlobalProspectus,
-    scaSolutionsProspectus,
-    sampleSaaSProspectus,
-  ]);
-  const [currentDossier, setCurrentDossier] = useState<ProspectusDossier>(stratusGlobalProspectus);
+  
+  // Lazy initialize dossiers from localStorage so all uploaded dossiers persist across refreshes on Vercel
+  const [dossiers, setDossiers] = useState<ProspectusDossier[]>(() => {
+    return loadStoredDossiers();
+  });
+
+  // Lazy initialize current active dossier from localStorage
+  const [currentDossier, setCurrentDossier] = useState<ProspectusDossier>(() => {
+    const initialList = loadStoredDossiers();
+    const savedActiveId = loadActiveDossierId();
+    if (savedActiveId) {
+      const found = initialList.find(d => d.id === savedActiveId);
+      if (found) return found;
+    }
+    return initialList[0] || stratusGlobalProspectus;
+  });
+
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+
+  // Background sync with server if running in fullstack mode
+  useEffect(() => {
+    fetch('/api/dossiers')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.success && Array.isArray(data.dossiers) && data.dossiers.length > 0) {
+          setDossiers(prev => {
+            const existingIds = new Set(prev.map(d => d.id));
+            const newServerItems = data.dossiers.filter((sd: ProspectusDossier) => !existingIds.has(sd.id));
+            if (newServerItems.length > 0) {
+              const merged = [...newServerItems, ...prev];
+              saveStoredDossiers(merged);
+              return merged;
+            }
+            return prev;
+          });
+        }
+      })
+      .catch(() => {
+        // Offline / serverless cold-start: local storage remains authority
+      });
+  }, []);
+
+  const handleSelectDossier = (dossier: ProspectusDossier) => {
+    setCurrentDossier(dossier);
+    saveActiveDossierId(dossier.id);
+  };
 
   const handleSelectSample = (id: string) => {
     const found = dossiers.find(d => d.id === id);
     if (found) {
-      setCurrentDossier(found);
+      handleSelectDossier(found);
     }
   };
 
   const handleEvaluationComplete = (newDossier: ProspectusDossier) => {
-    setDossiers(prev => [newDossier, ...prev]);
-    setCurrentDossier(newDossier);
+    // Defense: verify not duplicate before inserting
+    const dupCheck = checkDuplicateProspectus(
+      {
+        companyName: newDossier.companyName,
+        registrationNo: newDossier.registrationNo,
+        fileName: newDossier.sourceFileName,
+      },
+      dossiers
+    );
+
+    if (dupCheck.isDuplicate && dupCheck.matchedDossier && dupCheck.matchedDossier.id !== newDossier.id) {
+      // If already exists, switch to the existing evaluated dossier
+      handleSelectDossier(dupCheck.matchedDossier);
+      setActiveTab('dashboard');
+      return;
+    }
+
+    // Persist new dossier permanently into state and localStorage
+    const updated = [newDossier, ...dossiers.filter(d => d.id !== newDossier.id)];
+    setDossiers(updated);
+    saveStoredDossiers(updated);
+    handleSelectDossier(newDossier);
     setActiveTab('dashboard');
+
+    // Sync with serverless / express backend if available
+    fetch('/api/dossiers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newDossier),
+    }).catch(() => {});
+  };
+
+  const handleDeleteDossier = (id: string) => {
+    const updated = deleteStoredDossier(id, dossiers);
+    setDossiers(updated);
+    if (currentDossier.id === id) {
+      const nextDossier = updated[0] || stratusGlobalProspectus;
+      handleSelectDossier(nextDossier);
+    }
+    fetch(`/api/dossiers/${id}`, { method: 'DELETE' }).catch(() => {});
+  };
+
+  const handleResetDefaults = () => {
+    const defaults = resetDossiersToDefaults();
+    setDossiers(defaults);
+    handleSelectDossier(defaults[0]);
   };
 
   return (
@@ -41,10 +132,12 @@ export default function App() {
       <ProspectusHeader
         currentDossier={currentDossier}
         availableDossiers={dossiers}
-        onSelectDossier={setCurrentDossier}
+        onSelectDossier={handleSelectDossier}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        onDeleteDossier={handleDeleteDossier}
+        onResetDefaults={handleResetDefaults}
       />
 
       {/* Main Analysis Viewport */}
@@ -70,7 +163,14 @@ export default function App() {
           <AiSentimentRedFlagsView
             key={currentDossier.id}
             dossier={currentDossier}
-            onUpdateDossier={setCurrentDossier}
+            onUpdateDossier={(updatedDossier) => {
+              handleSelectDossier(updatedDossier);
+              setDossiers(prev => {
+                const updatedList = prev.map(d => d.id === updatedDossier.id ? updatedDossier : d);
+                saveStoredDossiers(updatedList);
+                return updatedList;
+              });
+            }}
           />
         )}
 
@@ -83,12 +183,13 @@ export default function App() {
         )}
       </main>
 
-      {/* Upload & Evaluate Modal */}
+      {/* Upload & Evaluate Modal with Duplicate Detection */}
       <UploadProspectusModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onEvaluationComplete={handleEvaluationComplete}
         onSelectSample={handleSelectSample}
+        existingDossiers={dossiers}
       />
 
       {/* Institutional Footer with Developer Credits, Methodology & Regulatory Disclosures */}

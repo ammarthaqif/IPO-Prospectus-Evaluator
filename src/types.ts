@@ -164,6 +164,9 @@ export interface ProspectusDossier {
   rawProspectusText: string;
   currency?: string;
   currencySymbol?: string;
+  sourceFileName?: string;
+  evaluatedAt?: string;
+  isCustomUpload?: boolean;
 
   // Extended dynamic fields
   fundManagerVerdict?: FundManagerVerdict;
