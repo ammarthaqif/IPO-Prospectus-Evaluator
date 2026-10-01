@@ -16,8 +16,9 @@ jobs:
     name: Build & Typecheck (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [20.x, 22.x]
+        node-version: [22.x, 24.x]
 
     steps:
       - name: Checkout Code
@@ -27,15 +28,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: ${{ hashFiles('package-lock.json') != '' && 'npm' || '' }}
+          cache: 'npm'
 
       - name: Install Dependencies
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+          npm ci || npm install
 
       - name: Typecheck and Lint
         run: npm run lint
