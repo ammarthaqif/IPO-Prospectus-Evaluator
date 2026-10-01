@@ -6,6 +6,7 @@ import {
   getDocs, 
   getDoc, 
   setDoc, 
+  deleteDoc,
   query, 
   where, 
   onSnapshot, 
@@ -13,7 +14,7 @@ import {
   Unsubscribe 
 } from 'firebase/firestore';
 import type { ProspectusDossier } from '../types';
-import { normalizeCompanyName, normalizeRegistrationNo } from '../utils/dossierStorage';
+import { normalizeCompanyName, normalizeRegistrationNo, getDeletedDossierIds } from '../utils/dossierStorage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase App instance singleton
@@ -256,7 +257,11 @@ export function subscribeToCloudDossiers(
  */
 export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): Promise<void> {
   try {
+    const deletedIds = getDeletedDossierIds();
     for (const d of defaults) {
+      if (deletedIds.has(d.id) || d.id === 'cloudnexus-2025' || d.id === 'sample-saas-2024') {
+        continue;
+      }
       const docRef = doc(db, COLLECTION_NAME, d.id);
       const existing = await getDoc(docRef);
       if (!existing.exists()) {
@@ -275,5 +280,44 @@ export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): P
     console.info('[Firebase] Baseline default dossiers verified in Cloud database.');
   } catch (err) {
     console.warn('[Firebase] Cloud seeding skipped or offline:', err);
+  }
+}
+
+/**
+ * Deletes an evaluated prospectus from the Cloud Firestore database
+ * so it is removed for all other users across the platform in real time.
+ */
+export async function deleteProspectusFromCloud(dossierId: string): Promise<boolean> {
+  if (!dossierId) return false;
+  try {
+    const docRef = doc(db, COLLECTION_NAME, dossierId);
+    await deleteDoc(docRef);
+    console.info(`[Firebase] Prospectus "${dossierId}" successfully deleted from Cloud Firestore.`);
+
+    // If deleting nexus or related document, sweep any docs matching ID or company name
+    const idLower = dossierId.toLowerCase();
+    if (idLower.includes('nexus') || idLower.includes('uploaded')) {
+      try {
+        const snap = await getDocs(collection(db, COLLECTION_NAME));
+        for (const docItem of snap.docs) {
+          const data = docItem.data();
+          const docIdLower = docItem.id.toLowerCase();
+          const compLower = (data.companyName || '').toLowerCase();
+          if (
+            docItem.id === dossierId ||
+            (idLower.includes('nexus') && (docIdLower.includes('nexus') || compLower.includes('nexus')))
+          ) {
+            await deleteDoc(doc(db, COLLECTION_NAME, docItem.id));
+            console.info(`[Firebase] Swept matching document: ${docItem.id}`);
+          }
+        }
+      } catch (sweepErr) {
+        console.warn('[Firebase] Secondary sweep notice:', sweepErr);
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error(`[Firebase] Failed to delete prospectus "${dossierId}" from Cloud Firestore:`, error);
+    return false;
   }
 }

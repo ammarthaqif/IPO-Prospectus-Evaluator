@@ -46,6 +46,8 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
   cloudDossiersCount,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
 
   // Close on Escape key
   React.useEffect(() => {
@@ -197,12 +199,12 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                           ACE / Main Market (M&E)
                         </span>
                       )}
-                      {!['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
+                      {!['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(dossier.id) && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
                           <FileCheck2 className="w-3 h-3 text-indigo-400" /> Custom Evaluated
                         </span>
                       )}
-                      {(dossier.isCloudShared || !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id)) && (
+                      {(dossier.isCloudShared || !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(dossier.id)) && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 font-mono" title="Persisted in Cloud Firestore and available to all users">
                           <Cloud className="w-3 h-3 text-cyan-400" /> Cloud Shared
                         </span>
@@ -237,20 +239,51 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                       {dossier.fundManagerVerdict?.recommendation || 'OVERWEIGHT'}
                     </span>
 
-                    {onDeleteDossier && !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(dossier.id) && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm(`Remove custom prospectus dossier "${dossier.companyName}" from your workspace library?`)) {
-                            onDeleteDossier(dossier.id);
-                          }
-                        }}
-                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                        title="Delete evaluated dossier"
+                    {deletingId === dossier.id ? (
+                      <div 
+                        onClick={(e) => e.stopPropagation()} 
+                        className="flex items-center gap-1.5 bg-rose-950/90 border border-rose-500/60 rounded-lg px-2.5 py-1 text-xs text-rose-200 animate-in fade-in shadow-md"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <span className="text-[11px] font-medium hidden xs:inline">Delete?</span>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (onDeleteDossier) {
+                              await onDeleteDossier(dossier.id);
+                            }
+                            setDeletingId(null);
+                          }}
+                          className="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Confirm</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingId(null);
+                          }}
+                          className="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      onDeleteDossier && (availableDossiers.length > 1) && !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(dossier.id) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingId(dossier.id);
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer flex items-center gap-1"
+                          title="Delete evaluated prospectus from cloud and library"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )
                     )}
 
                     <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
@@ -318,21 +351,40 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span>Preserved across page refreshes</span>
             </div>
-            {onResetDefaults && availableDossiers.some(d => !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025', 'sample-saas-2024'].includes(d.id)) && (
+            {onResetDefaults && availableDossiers.some(d => !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(d.id)) && (
               <>
                 <span className="text-slate-700">•</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Reset workspace to standard default dossiers? Custom evaluated dossiers will be cleared.')) {
-                      onResetDefaults();
-                    }
-                  }}
-                  className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3 h-3 text-slate-400" />
-                  <span>Reset Defaults</span>
-                </button>
+                {isConfirmingReset ? (
+                  <div className="flex items-center gap-1.5 bg-slate-900 border border-amber-500/50 rounded-lg px-2 py-0.5 text-[11px] text-amber-200">
+                    <span>Reset defaults?</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onResetDefaults();
+                        setIsConfirmingReset(false);
+                      }}
+                      className="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10px] cursor-pointer"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsConfirmingReset(false)}
+                      className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px] cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingReset(true)}
+                    className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3 text-slate-400" />
+                    <span>Reset Defaults</span>
+                  </button>
+                )}
               </>
             )}
           </div>

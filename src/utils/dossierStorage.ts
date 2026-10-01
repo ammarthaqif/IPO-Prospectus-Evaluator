@@ -2,19 +2,63 @@ import { ProspectusDossier } from '../types';
 import { 
   goldLiProspectus,
   stratusGlobalProspectus, 
-  scaSolutionsProspectus, 
-  sampleSaaSProspectus 
+  scaSolutionsProspectus 
 } from '../data/defaultProspectus';
 
 const DOSSIERS_STORAGE_KEY = 'ipo_evaluator_dossiers_v2';
 const ACTIVE_ID_STORAGE_KEY = 'ipo_evaluator_active_dossier_id_v2';
+const DELETED_IDS_STORAGE_KEY = 'ipo_evaluator_deleted_dossier_ids_v2';
 
+// Core verified Malaysian IPO prospectus dossiers
 export const DEFAULT_DOSSIERS: ProspectusDossier[] = [
   goldLiProspectus,
   stratusGlobalProspectus,
   scaSolutionsProspectus,
-  sampleSaaSProspectus,
 ];
+
+export const BASELINE_DOSSIER_IDS = new Set(DEFAULT_DOSSIERS.map(d => d.id));
+
+/**
+ * Retrieves the set of permanently deleted dossier IDs from localStorage
+ * to prevent background cloud/server sync from resurrecting deleted dossiers.
+ */
+export function getDeletedDossierIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DELETED_IDS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const set = new Set<string>(Array.isArray(parsed) ? parsed : []);
+    // Always treat legacy test mockup as deleted
+    set.add('cloudnexus-2025');
+    set.add('sample-saas-2024');
+    return set;
+  } catch {
+    return new Set(['cloudnexus-2025', 'sample-saas-2024']);
+  }
+}
+
+/**
+ * Permanently registers a dossier ID as deleted.
+ */
+export function addDeletedDossierId(id: string): void {
+  try {
+    const set = getDeletedDossierIds();
+    set.add(id);
+    localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch (err) {
+    console.warn('[DossierStorage] Failed to persist deleted dossier ID:', err);
+  }
+}
+
+/**
+ * Clears the tombstone deleted list when user explicitly resets to defaults.
+ */
+export function clearDeletedDossierIds(): void {
+  try {
+    localStorage.removeItem(DELETED_IDS_STORAGE_KEY);
+  } catch {
+    // Ignore
+  }
+}
 
 /**
  * Normalizes a company name for fuzzy duplicate comparison:
@@ -148,24 +192,28 @@ export function checkDuplicateProspectus(
  * Survives page reloads and Vercel serverless page refreshes.
  */
 export function loadStoredDossiers(): ProspectusDossier[] {
+  const deletedIds = getDeletedDossierIds();
+
   try {
     const raw = localStorage.getItem(DOSSIERS_STORAGE_KEY);
+    const activeDefaults = DEFAULT_DOSSIERS.filter(d => !deletedIds.has(d.id));
+
     if (!raw) {
-      return DEFAULT_DOSSIERS;
+      return activeDefaults.length > 0 ? activeDefaults : DEFAULT_DOSSIERS;
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      return DEFAULT_DOSSIERS;
+      return activeDefaults.length > 0 ? activeDefaults : DEFAULT_DOSSIERS;
     }
 
-    // Ensure all default sample dossiers exist in the list
+    // Ensure baseline defaults exist unless deleted
     const defaultIds = new Set(DEFAULT_DOSSIERS.map(d => d.id));
-    const customDossiers = parsed.filter(d => !defaultIds.has(d.id));
+    const customDossiers = parsed.filter(d => !defaultIds.has(d.id) && !deletedIds.has(d.id));
 
-    // Combine custom dossiers followed by default dossiers
-    const merged = [...customDossiers, ...DEFAULT_DOSSIERS];
-    return merged;
+    // Combine custom dossiers followed by non-deleted defaults
+    const merged = [...customDossiers, ...activeDefaults];
+    return merged.length > 0 ? merged : [stratusGlobalProspectus];
   } catch (err) {
     console.warn('[DossierStorage] Failed to read from localStorage, using defaults:', err);
     return DEFAULT_DOSSIERS;
@@ -229,18 +277,19 @@ export function saveActiveDossierId(id: string): void {
 }
 
 /**
- * Deletes a custom dossier by ID from localStorage.
+ * Deletes a dossier by ID from localStorage and records it as deleted.
  */
 export function deleteStoredDossier(id: string, currentList: ProspectusDossier[]): ProspectusDossier[] {
-  // Prevent deleting default baseline dossiers
-  const defaultIds = new Set(DEFAULT_DOSSIERS.map(d => d.id));
-  if (defaultIds.has(id)) {
-    return currentList;
-  }
+  if (!id) return currentList;
+
+  // Record into tombstone registry so it is never re-added by background sync
+  addDeletedDossierId(id);
 
   const updated = currentList.filter(d => d.id !== id);
-  saveStoredDossiers(updated);
-  return updated;
+  // Ensure at least one dossier remains
+  const finalized = updated.length > 0 ? updated : [stratusGlobalProspectus];
+  saveStoredDossiers(finalized);
+  return finalized;
 }
 
 /**
@@ -249,6 +298,7 @@ export function deleteStoredDossier(id: string, currentList: ProspectusDossier[]
 export function resetDossiersToDefaults(): ProspectusDossier[] {
   try {
     localStorage.removeItem(DOSSIERS_STORAGE_KEY);
+    clearDeletedDossierIds();
   } catch {
     // Ignore
   }

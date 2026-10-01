@@ -18,22 +18,31 @@ import {
   Droplets,
   Layers,
   Scale,
-  UploadCloud
+  UploadCloud,
+  Trash2
 } from 'lucide-react';
 import { ProspectusDossier, FinancialYearData } from '../types';
+import { ProspectusRadarComparison } from './ProspectusRadarComparison';
 
 interface DashboardOverviewProps {
   dossier: ProspectusDossier;
+  availableDossiers?: ProspectusDossier[];
+  onSelectDossier?: (dossier: ProspectusDossier) => void;
   onNavigateTab: (tab: string) => void;
   onOpenUploadModal?: () => void;
+  onDeleteDossier?: (id: string) => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   dossier,
+  availableDossiers = [],
+  onSelectDossier,
   onNavigateTab,
   onOpenUploadModal,
+  onDeleteDossier,
 }) => {
   const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'margins'>('revenue');
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const currency = dossier.currencySymbol || (dossier.listingMarket?.includes('NASDAQ') || dossier.registrationNo?.includes('US') ? '$' : 'RM');
 
@@ -119,14 +128,62 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           {/* Quick AI Conviction & Stance Badge + Upload Action */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {availableDossiers.length > 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('radar-comparison-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-500/40 text-xs font-semibold text-indigo-300 hover:text-white transition-all cursor-pointer shadow-sm group"
+                title="Jump directly to Side-by-Side Radar Benchmark"
+              >
+                <Scale className="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition-transform" />
+                <span>Compare Dossiers ({availableDossiers.length})</span>
+              </button>
+            )}
+
             {onOpenUploadModal && (
               <button
                 onClick={onOpenUploadModal}
-                className="hidden sm:flex items-center gap-2 px-3.5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 hover:text-white transition-all group"
+                className="hidden sm:flex items-center gap-2 px-3.5 py-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-200 hover:text-white transition-all group cursor-pointer"
               >
                 <UploadCloud className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
                 <span>Upload Other PDF</span>
               </button>
+            )}
+
+            {onDeleteDossier && !['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(dossier.id) && (
+              isConfirmingDelete ? (
+                <div className="flex items-center gap-2 bg-rose-950/80 border border-rose-500/50 rounded-xl px-3 py-2 text-xs text-rose-200 animate-in fade-in">
+                  <span className="text-[11px] font-medium">Delete from Cloud & Library?</span>
+                  <button
+                    onClick={() => {
+                      onDeleteDossier(dossier.id);
+                      setIsConfirmingDelete(false);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors shadow-sm"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirm</span>
+                  </button>
+                  <button
+                    onClick={() => setIsConfirmingDelete(false)}
+                    className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsConfirmingDelete(true)}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-3 rounded-xl bg-slate-900/90 hover:bg-rose-950/40 border border-slate-700/80 hover:border-rose-500/50 text-xs font-semibold text-slate-300 hover:text-rose-300 transition-all cursor-pointer"
+                  title="Delete this custom uploaded prospectus"
+                >
+                  <Trash2 className="w-4 h-4 text-slate-400" />
+                  <span>Delete Prospectus</span>
+                </button>
+              )
             )}
 
             <div className="flex items-center gap-3 bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5">
@@ -511,6 +568,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* Side-by-Side Prospectus Comparison & Radar Benchmark Section */}
+      <div id="radar-comparison-section" className="scroll-mt-6">
+        <ProspectusRadarComparison
+          currentDossier={dossier}
+          availableDossiers={availableDossiers.length > 0 ? availableDossiers : [dossier]}
+          onSelectDossier={onSelectDossier}
+          onOpenUploadModal={onOpenUploadModal}
+        />
       </div>
 
       {/* Critical Red Flag Strip & Due Diligence Alerts */}

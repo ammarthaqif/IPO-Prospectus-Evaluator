@@ -18,11 +18,13 @@ import {
   deleteStoredDossier, 
   resetDossiersToDefaults,
   checkDuplicateProspectus,
+  getDeletedDossierIds,
   DEFAULT_DOSSIERS
 } from './utils/dossierStorage';
 import { 
   subscribeToCloudDossiers, 
   saveProspectusToCloud, 
+  deleteProspectusFromCloud,
   seedInitialCloudDossiers, 
   checkCloudDuplicate 
 } from './services/firebase';
@@ -62,13 +64,17 @@ export default function App() {
       (cloudList) => {
         if (cloudList && cloudList.length > 0) {
           setIsCloudLive(true);
-          setCloudCount(cloudList.length);
+          const deletedIds = getDeletedDossierIds();
+          const validCloudList = cloudList.filter(
+            (c) => !deletedIds.has(c.id) && c.id !== 'cloudnexus-2025' && c.id !== 'sample-saas-2024'
+          );
+          setCloudCount(validCloudList.length);
           setDossiers((prev) => {
-            const cloudIds = new Set(cloudList.map((c) => c.id));
-            const localOnly = prev.filter((p) => !cloudIds.has(p.id));
-            const merged = [...cloudList, ...localOnly];
+            const cloudIds = new Set(validCloudList.map((c) => c.id));
+            const localOnly = prev.filter((p) => !cloudIds.has(p.id) && !deletedIds.has(p.id));
+            const merged = [...validCloudList, ...localOnly];
             saveStoredDossiers(merged);
-            return merged;
+            return merged.length > 0 ? merged : [stratusGlobalProspectus];
           });
         }
       },
@@ -83,9 +89,16 @@ export default function App() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data && data.success && Array.isArray(data.dossiers) && data.dossiers.length > 0) {
+          const deletedIds = getDeletedDossierIds();
           setDossiers((prev) => {
             const existingIds = new Set(prev.map((d) => d.id));
-            const newServerItems = data.dossiers.filter((sd: ProspectusDossier) => !existingIds.has(sd.id));
+            const newServerItems = data.dossiers.filter(
+              (sd: ProspectusDossier) =>
+                !existingIds.has(sd.id) &&
+                !deletedIds.has(sd.id) &&
+                sd.id !== 'cloudnexus-2025' &&
+                sd.id !== 'sample-saas-2024'
+            );
             if (newServerItems.length > 0) {
               const merged = [...newServerItems, ...prev];
               saveStoredDossiers(merged);
@@ -176,13 +189,23 @@ export default function App() {
     }).catch(() => {});
   };
 
-  const handleDeleteDossier = (id: string) => {
+  const handleDeleteDossier = async (id: string) => {
+    // 1. Immediately delete from local state and localStorage
     const updated = deleteStoredDossier(id, dossiers);
     setDossiers(updated);
     if (currentDossier.id === id) {
       const nextDossier = updated[0] || stratusGlobalProspectus;
       handleSelectDossier(nextDossier);
     }
+
+    // 2. Delete from Cloud Firestore database so other users reflect it and it doesn't resurrect
+    try {
+      await deleteProspectusFromCloud(id);
+    } catch (err) {
+      console.warn('[Firebase delete error]:', err);
+    }
+
+    // 3. Delete from backend express server cache
     fetch(`/api/dossiers/${id}`, { method: 'DELETE' }).catch(() => {});
   };
 
@@ -215,8 +238,11 @@ export default function App() {
           <DashboardOverview
             key={currentDossier.id}
             dossier={currentDossier}
+            availableDossiers={dossiers}
+            onSelectDossier={handleSelectDossier}
             onNavigateTab={setActiveTab}
             onOpenUploadModal={() => setIsUploadModalOpen(true)}
+            onDeleteDossier={handleDeleteDossier}
           />
         )}
 

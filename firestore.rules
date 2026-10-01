@@ -9,7 +9,8 @@ service cloud.firestore {
                     && request.resource.data.companyName.size() > 0;
       allow update: if request.resource.data.id == dossierId
                     && request.resource.data.companyName is string;
-      allow delete: if false;
+      // Allow deletion of any prospectus dossier by user
+      allow delete: if true;
     }
 
     // Health check and connection validation collection
