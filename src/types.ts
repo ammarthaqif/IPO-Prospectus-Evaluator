@@ -172,6 +172,17 @@ export interface AnalystConsensus {
   consensusRating: 'STRONG_SUBSCRIBE' | 'MODERATE_SUBSCRIBE' | 'NEUTRAL' | 'AVOID';
 }
 
+export interface WebIpoPriceSource {
+  isWebSourced: boolean;
+  price: number;
+  currency: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  verifiedDate?: string;
+  searchSnippet?: string;
+  bursaStockCode?: string;
+}
+
 export interface ListingPerformance {
   listingDate?: string; // e.g. "28 March 2026"
   listingStatus: 'UPCOMING' | 'LISTED';
@@ -186,6 +197,7 @@ export interface ListingPerformance {
   intradaySpreadPct?: number;
   marketCapAtIpoRM?: number; // in RM'000
   peAtIpo?: number;
+  webPriceSource?: WebIpoPriceSource;
   updatedAt?: string;
   updatedBy?: string;
 }
@@ -234,6 +246,7 @@ export interface ProspectusDossier {
 
   // Shariah Compliance, IPO Pricing & Expert Analyst Coverage
   ipoPrice?: number;
+  webPriceSource?: WebIpoPriceSource;
   shariahCompliance?: ShariahComplianceInfo;
   analystCoverage?: AnalystFairValue[];
   analystConsensus?: AnalystConsensus;

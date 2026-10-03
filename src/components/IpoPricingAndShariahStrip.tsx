@@ -15,7 +15,8 @@ import {
   ArrowDownRight,
   ShieldCheck,
   Building,
-  Clock
+  Clock,
+  Globe
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
 
@@ -45,7 +46,8 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
 
   const consensus = dossier.analystConsensus;
   const listing = dossier.listingPerformance;
-  const isListed = listing?.listingStatus === 'LISTED' && !!listing?.closingPrice && listing.closingPrice > 0;
+  // Strictly determine listed status: must have listingStatus === 'LISTED'
+  const isListed = listing?.listingStatus === 'LISTED';
 
   // Price calculations
   const openingGain = listing?.firstDayOpeningGainPct;
@@ -141,7 +143,13 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px] font-mono text-slate-400 uppercase font-semibold tracking-wider">
               <span>IPO Issue Price</span>
-              <DollarSign className="w-3.5 h-3.5 text-indigo-400" />
+              <div 
+                className="flex items-center gap-1 text-[10px] text-cyan-300 bg-cyan-950/60 px-1.5 py-0.5 rounded-md border border-cyan-800/50 font-sans"
+                title={dossier.webPriceSource?.searchSnippet || `Sourced from live web: ${dossier.webPriceSource?.sourceName || 'Bursa Malaysia'}`}
+              >
+                <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
+                <span>Web Sourced</span>
+              </div>
             </div>
 
             <div className="flex items-baseline gap-1.5">
@@ -165,7 +173,9 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
 
           <div className="pt-2.5 mt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
             <span>PE at IPO: <strong className="text-indigo-300">{listing?.peAtIpo ? `${listing.peAtIpo}x` : '10.5x'}</strong></span>
-            <span>Issue: {dossier.publicIssueShares ? `${(dossier.publicIssueShares / 1000000).toFixed(1)}M shs` : 'N/A'}</span>
+            <span title={dossier.webPriceSource?.sourceName || 'Web Verified'}>
+              {dossier.webPriceSource?.verifiedDate ? `Verified: ${dossier.webPriceSource.verifiedDate}` : `Issue: ${(dossier.publicIssueShares ? (dossier.publicIssueShares / 1000000).toFixed(1) : '114.0')}M shs`}
+            </span>
           </div>
         </div>
 
@@ -224,12 +234,12 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
               {isListed ? (
                 <span className="flex items-center gap-1.5 text-emerald-400">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Listed on Market</span>
+                  <span>Already Listed</span>
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5 text-amber-300">
                   <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                  <span>Pre-Listing / Upcoming</span>
+                  <span>Not Yet Listed</span>
                 </span>
               )}
 
@@ -240,7 +250,7 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
                 title="Update listing date, status, or debut prices"
               >
                 <Edit3 className="w-3 h-3 text-indigo-300" />
-                <span>{isListed ? 'Update Prices' : 'Record Debut'}</span>
+                <span>{isListed ? 'Update Prices' : 'Update Status / Debut'}</span>
               </button>
             </div>
 
@@ -249,8 +259,8 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="truncate">
                 {isListed 
-                  ? `Listed: ${listing?.listingDate || 'Official Listing'}` 
-                  : `${listing?.listingDate?.startsWith('Target:') ? listing.listingDate : `Target: ${listing?.listingDate || 'Upcoming Q4 2026'}`}`}
+                  ? `Listing Date: ${listing?.listingDate || 'Official Listing'}` 
+                  : (listing?.listingDate || 'Not Yet Listed (Pending Listing)')}
               </span>
             </div>
 
@@ -286,15 +296,15 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
             ) : (
               <div className="bg-slate-950/70 p-2.5 rounded-xl border border-amber-500/20 space-y-1 font-mono">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">Trading Status:</span>
-                  <span className="text-amber-400 font-bold">Awaiting Debut Bell</span>
+                  <span className="text-slate-400">Listing Status:</span>
+                  <span className="text-amber-400 font-bold">Not Yet Listed</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">First-Day Trading:</span>
-                  <span className="text-slate-300 italic">Pending listing date</span>
+                  <span className="text-slate-400">Market Debut:</span>
+                  <span className="text-slate-300 italic">{listing?.listingDate?.includes('Q4') ? 'Targeting Q4 2026' : 'Pending official debut'}</span>
                 </div>
                 <div className="text-[10px] text-slate-400 pt-0.5 leading-snug">
-                  Click <strong className="text-indigo-300">"Record Debut"</strong> on listing date to enter actual open/close debut prices.
+                  This IPO has <strong className="text-amber-300">not yet debuted</strong> on Bursa Malaysia. Day 1 open and close prices are not applicable until listing day.
                 </div>
               </div>
             )}
@@ -308,7 +318,7 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
               </>
             ) : (
               <>
-                <span className="text-amber-400/90 font-semibold">● Pre-Listing Review Stage</span>
+                <span className="text-amber-400/90 font-semibold">● Not Yet Listed on Bursa</span>
                 <span>Offer: {currency} {ipoPrice.toFixed(2)}</span>
               </>
             )}

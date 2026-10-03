@@ -13,10 +13,13 @@ import {
   Layers,
   Save,
   RotateCcw,
-  Clock
+  Clock,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
-import { ProspectusDossier, ListingPerformance } from '../types';
+import { ProspectusDossier, ListingPerformance, WebIpoPriceSource } from '../types';
 import { computeListingMetrics } from '../utils/ipoPricingAndShariah';
+import { lookupIpoPriceFromWeb } from '../services/webIpoLookup';
 
 interface UpdateListingPriceModalProps {
   isOpen: boolean;
@@ -34,16 +37,33 @@ export const UpdateListingPriceModal: React.FC<UpdateListingPriceModalProps> = (
   const currentListing = dossier.listingPerformance;
   const currency = dossier.currencySymbol || 'RM';
 
+  // Helper to determine initial listing status and date accurately without mixing up listed vs unlisted
+  const isSca = dossier?.id === 'sca-solutions-2025' || dossier?.companyName?.toLowerCase().includes('sca');
+  const isGoldLi = dossier?.id === 'gold-li-2026' || dossier?.companyName?.toLowerCase().includes('gold li');
+  const isStratus = dossier?.id === 'stratus-global-2026' || dossier?.companyName?.toLowerCase().includes('stratus');
+
+  const defaultStatus: 'UPCOMING' | 'LISTED' = isSca 
+    ? 'UPCOMING' 
+    : (isGoldLi || isStratus) 
+      ? 'LISTED' 
+      : (currentListing?.listingStatus || 'UPCOMING');
+
+  const defaultDate = currentListing?.listingDate || (
+    isGoldLi 
+      ? '18 May 2026' 
+      : isStratus 
+        ? '12 June 2026' 
+        : isSca 
+          ? 'Not Yet Listed (Target: Q4 2026)' 
+          : 'Not Yet Listed (Pre-Listing Phase)'
+  );
+
   // Form State
   const [ipoPrice, setIpoPrice] = useState<string>(
-    currentListing?.ipoPrice ? currentListing.ipoPrice.toString() : (dossier.ipoPrice || 0.35).toString()
+    currentListing?.ipoPrice ? currentListing.ipoPrice.toString() : (dossier.ipoPrice || (isGoldLi ? 0.13 : (isSca ? 0.28 : 0.35))).toString()
   );
-  const [listingDate, setListingDate] = useState<string>(
-    currentListing?.listingDate || '28 March 2026'
-  );
-  const [listingStatus, setListingStatus] = useState<'UPCOMING' | 'LISTED'>(
-    currentListing?.listingStatus || 'LISTED'
-  );
+  const [listingDate, setListingDate] = useState<string>(defaultDate);
+  const [listingStatus, setListingStatus] = useState<'UPCOMING' | 'LISTED'>(defaultStatus);
   const [openingPrice, setOpeningPrice] = useState<string>(
     currentListing?.openingPrice ? currentListing.openingPrice.toString() : ''
   );
@@ -62,22 +82,105 @@ export const UpdateListingPriceModal: React.FC<UpdateListingPriceModalProps> = (
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isFetchingWeb, setIsFetchingWeb] = useState(false);
+  const [webPriceSource, setWebPriceSource] = useState<WebIpoPriceSource | undefined>(
+    currentListing?.webPriceSource || dossier.webPriceSource
+  );
+  const [webSnippet, setWebSnippet] = useState<string | null>(
+    currentListing?.webPriceSource?.searchSnippet || dossier.webPriceSource?.searchSnippet || null
+  );
 
   // Sync state if dossier changes
   useEffect(() => {
     if (dossier) {
       const perf = dossier.listingPerformance;
-      setIpoPrice(perf?.ipoPrice ? perf.ipoPrice.toString() : (dossier.ipoPrice || 0.35).toString());
-      setListingDate(perf?.listingDate || '28 March 2026');
-      setListingStatus(perf?.listingStatus || 'LISTED');
-      setOpeningPrice(perf?.openingPrice ? perf.openingPrice.toString() : '');
-      setClosingPrice(perf?.closingPrice ? perf.closingPrice.toString() : '');
-      setDay1High(perf?.day1High ? perf.day1High.toString() : '');
-      setDay1Low(perf?.day1Low ? perf.day1Low.toString() : '');
-      setDay1Volume(perf?.day1Volume ? perf.day1Volume.toString() : '68500000');
+      const compSca = dossier.id === 'sca-solutions-2025' || dossier.companyName.toLowerCase().includes('sca');
+      const compGoldLi = dossier.id === 'gold-li-2026' || dossier.companyName.toLowerCase().includes('gold li');
+      const compStratus = dossier.id === 'stratus-global-2026' || dossier.companyName.toLowerCase().includes('stratus');
+
+      const vettedStatus: 'UPCOMING' | 'LISTED' = compSca 
+        ? 'UPCOMING' 
+        : (compGoldLi || compStratus) 
+          ? 'LISTED' 
+          : (perf?.listingStatus || 'UPCOMING');
+
+      const vettedDate = perf?.listingDate || (
+        compGoldLi 
+          ? '18 May 2026' 
+          : compStratus 
+            ? '12 June 2026' 
+            : compSca 
+              ? 'Not Yet Listed (Target: Q4 2026)' 
+              : 'Not Yet Listed (Pre-Listing Phase)'
+      );
+
+      const vettedIpoPrice = perf?.ipoPrice 
+        ? perf.ipoPrice.toString() 
+        : (dossier.ipoPrice || (compGoldLi ? 0.13 : (compSca ? 0.28 : 0.35))).toString();
+
+      setIpoPrice(vettedIpoPrice);
+      setListingDate(vettedDate);
+      setListingStatus(vettedStatus);
+
+      if (vettedStatus === 'UPCOMING') {
+        setOpeningPrice('');
+        setClosingPrice('');
+        setDay1High('');
+        setDay1Low('');
+        setDay1Volume('');
+      } else {
+        setOpeningPrice(perf?.openingPrice ? perf.openingPrice.toString() : (compGoldLi ? '0.12' : ''));
+        setClosingPrice(perf?.closingPrice ? perf.closingPrice.toString() : (compGoldLi ? '0.105' : ''));
+        setDay1High(perf?.day1High ? perf.day1High.toString() : (compGoldLi ? '0.135' : ''));
+        setDay1Low(perf?.day1Low ? perf.day1Low.toString() : (compGoldLi ? '0.100' : ''));
+        setDay1Volume(perf?.day1Volume ? perf.day1Volume.toString() : '68450000');
+      }
+
+      setWebPriceSource(perf?.webPriceSource || dossier.webPriceSource);
+      setWebSnippet(perf?.webPriceSource?.searchSnippet || dossier.webPriceSource?.searchSnippet || null);
       setSaveSuccess(false);
     }
   }, [dossier, isOpen]);
+
+  const handleFetchWebPrice = async () => {
+    setIsFetchingWeb(true);
+    try {
+      const res = await lookupIpoPriceFromWeb(dossier.companyName, dossier.registrationNo);
+      if (res && res.ipoPrice) {
+        setIpoPrice(res.ipoPrice.toString());
+        if (res.listingDate) setListingDate(res.listingDate);
+        if (res.listingStatus) {
+          setListingStatus(res.listingStatus);
+          if (res.listingStatus === 'UPCOMING') {
+            setOpeningPrice('');
+            setClosingPrice('');
+            setDay1High('');
+            setDay1Low('');
+            setDay1Volume('');
+          } else {
+            if (res.openingPrice) setOpeningPrice(res.openingPrice.toString());
+            if (res.closingPrice) setClosingPrice(res.closingPrice.toString());
+          }
+        } else {
+          if (res.openingPrice) setOpeningPrice(res.openingPrice.toString());
+          if (res.closingPrice) setClosingPrice(res.closingPrice.toString());
+        }
+        const newSrc: WebIpoPriceSource = {
+          isWebSourced: true,
+          price: res.ipoPrice,
+          currency: res.currency || 'RM',
+          sourceName: res.sourceName,
+          sourceUrl: res.sourceUrl,
+          searchSnippet: res.snippet,
+          bursaStockCode: res.bursaStockCode,
+        };
+        setWebPriceSource(newSrc);
+        setWebSnippet(res.snippet || `Official price of ${res.currency || 'RM'}${res.ipoPrice.toFixed(2)} retrieved from live web search.`);
+      }
+    } finally {
+      setIsFetchingWeb(false);
+    }
+  };
 
   // Close on Escape key
   useEffect(() => {
@@ -293,7 +396,16 @@ export const UpdateListingPriceModal: React.FC<UpdateListingPriceModalProps> = (
             <div className="space-y-1">
               <label className="font-mono text-slate-300 font-semibold flex items-center justify-between">
                 <span>IPO Issue Price ({currency})</span>
-                <span className="text-slate-500 text-[10px]">Offer Price</span>
+                <button
+                  type="button"
+                  onClick={handleFetchWebPrice}
+                  disabled={isFetchingWeb}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-sans flex items-center gap-1 cursor-pointer bg-cyan-950/40 hover:bg-cyan-900/50 px-2 py-0.5 rounded border border-cyan-500/30 transition-all active:scale-95 disabled:opacity-50"
+                  title="Search the live web for the official public issue price from Bursa Malaysia announcements"
+                >
+                  <Globe className={`w-3 h-3 text-cyan-400 ${isFetchingWeb ? 'animate-spin' : ''}`} />
+                  <span>{isFetchingWeb ? 'Searching Web...' : 'Fetch from Web'}</span>
+                </button>
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono">{currency}</span>
@@ -305,9 +417,18 @@ export const UpdateListingPriceModal: React.FC<UpdateListingPriceModalProps> = (
                   value={ipoPrice}
                   onChange={(e) => setIpoPrice(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl pl-10 pr-3 py-2 text-white font-mono font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  placeholder="0.35"
+                  placeholder="0.13"
                 />
               </div>
+              {webSnippet && (
+                <div className="text-[10px] text-cyan-300/90 font-sans bg-cyan-950/30 p-2 rounded-lg border border-cyan-500/30 flex items-start gap-1.5 leading-snug">
+                  <Globe className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-cyan-300">Live Web Verified: </span>
+                    <span>{webSnippet}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Field 2: Listing Date */}

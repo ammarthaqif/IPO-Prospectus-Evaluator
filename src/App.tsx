@@ -24,6 +24,7 @@ import {
   getDeletedDossierIds,
   DEFAULT_DOSSIERS
 } from './utils/dossierStorage';
+import { ensureIpoValuationAndShariah } from './utils/ipoPricingAndShariah';
 import { 
   subscribeToCloudDossiers, 
   saveProspectusToCloud, 
@@ -78,8 +79,14 @@ export default function App() {
             const cloudIds = new Set(validCloudList.map((c) => c.id));
             const localOnly = prev.filter((p) => !cloudIds.has(p.id) && !deletedIds.has(p.id));
             const merged = [...validCloudList, ...localOnly];
-            saveStoredDossiers(merged);
-            return merged.length > 0 ? merged : [stratusGlobalProspectus];
+            const normalized = merged.map(ensureIpoValuationAndShariah);
+            saveStoredDossiers(normalized);
+            return normalized.length > 0 ? normalized : [stratusGlobalProspectus];
+          });
+          setCurrentDossier((curr) => {
+            if (!curr) return curr;
+            const matching = validCloudList.find((c) => c.id === curr.id);
+            return matching ? ensureIpoValuationAndShariah(matching) : ensureIpoValuationAndShariah(curr);
           });
         }
       },
@@ -106,8 +113,9 @@ export default function App() {
             );
             if (newServerItems.length > 0) {
               const merged = [...newServerItems, ...prev];
-              saveStoredDossiers(merged);
-              return merged;
+              const normalized = merged.map(ensureIpoValuationAndShariah);
+              saveStoredDossiers(normalized);
+              return normalized;
             }
             return prev;
           });

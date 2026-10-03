@@ -125,9 +125,9 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
                           Day 1: {currentDossier.currencySymbol || 'RM'}{currentDossier.listingPerformance.closingPrice.toFixed(2)} ({currentDossier.listingPerformance.firstDayGainPct !== undefined && currentDossier.listingPerformance.firstDayGainPct >= 0 ? '+' : ''}{currentDossier.listingPerformance.firstDayGainPct}%)
                         </span>
                       ) : (
-                        <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-mono font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0" title="Not yet listed on Bursa Malaysia">
+                        <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-mono font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0" title="Not yet listed on Bursa Malaysia (Pending Official Debut)">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-                          Upcoming IPO
+                          Not Yet Listed
                         </span>
                       )}
                     </div>

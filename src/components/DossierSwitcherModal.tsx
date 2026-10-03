@@ -215,7 +215,7 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                         </span>
                       ) : (
                         <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/40 text-amber-300 border border-amber-500/30 font-mono">
-                          ⏳ Upcoming ({dossier.listingPerformance?.listingDate || 'Pre-Listing'})
+                          ⏳ Not Yet Listed ({dossier.listingPerformance?.listingDate?.replace(/^Not Yet Listed\s*\(?/i, '').replace(/\)$/, '') || 'Pre-Listing'})
                         </span>
                       )}
                       {!['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(dossier.id) && (

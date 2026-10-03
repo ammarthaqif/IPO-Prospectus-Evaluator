@@ -341,10 +341,20 @@ export function updateStoredDossierListingPerformance(
 
     const deltas = isUpcoming ? {} : computeListingMetrics(newIpoPrice, newOpen, newClose, newHigh, newLow);
 
+    let finalListingDate = updates.listingDate || currentPerf.listingDate;
+    if (isUpcoming) {
+      if (!finalListingDate || finalListingDate.trim() === '' || finalListingDate === '28 March 2026') {
+        finalListingDate = 'Not Yet Listed (Pre-Listing Phase)';
+      } else if (!finalListingDate.toLowerCase().includes('not yet') && !finalListingDate.toLowerCase().includes('target') && !finalListingDate.toLowerCase().includes('pending')) {
+        finalListingDate = `Not Yet Listed (Target: ${finalListingDate})`;
+      }
+    }
+
     const mergedPerf: ListingPerformance = {
       ...currentPerf,
       ...updates,
       listingStatus: newStatus,
+      listingDate: finalListingDate,
       ipoPrice: newIpoPrice,
       openingPrice: newOpen,
       closingPrice: newClose,

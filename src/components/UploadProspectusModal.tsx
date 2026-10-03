@@ -20,6 +20,7 @@ import { goldLiProspectus, scaSolutionsProspectus, sampleSaaSProspectus, stratus
 import { checkDuplicateProspectus, DuplicateCheckResult } from '../utils/dossierStorage';
 import { checkCloudDuplicate } from '../services/firebase';
 import { ensureIpoValuationAndShariah } from '../utils/ipoPricingAndShariah';
+import { lookupIpoPriceFromWeb } from '../services/webIpoLookup';
 
 interface UploadProspectusModalProps {
   isOpen: boolean;
@@ -1242,6 +1243,45 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
         evaluatedAt: new Date().toISOString(),
         isCustomUpload: true,
       };
+
+      // Requirement: IPO Price should be taken from the live web instead of from the prospectus text
+      let webLookup = null;
+      try {
+        setParsingStatusMsg('Searching live web for official IPO issue price and Bursa listing status...');
+        webLookup = await lookupIpoPriceFromWeb(
+          compName,
+          aiData.registrationNo,
+          aiData.ticker || aiData.stockCode
+        );
+      } catch (lookupErr) {
+        console.warn('[Web IPO Price Lookup notice during upload]:', lookupErr);
+      }
+
+      if (webLookup && webLookup.ipoPrice && webLookup.ipoPrice > 0) {
+        newDossier.ipoPrice = webLookup.ipoPrice;
+        newDossier.webPriceSource = {
+          isWebSourced: true,
+          price: webLookup.ipoPrice,
+          currency: webLookup.currency || 'RM',
+          sourceName: webLookup.sourceName || 'Bursa Malaysia & Financial News Announcements',
+          sourceUrl: webLookup.sourceUrl || 'https://www.bursamalaysia.com',
+          verifiedDate: webLookup.listingDate || 'Web-Verified Issue Price',
+          searchSnippet: webLookup.snippet || `Official IPO Issue Price of RM ${webLookup.ipoPrice.toFixed(2)} sourced from live web search.`,
+          bursaStockCode: webLookup.bursaStockCode,
+        };
+
+        const isExplicitlyListed = webLookup.listingStatus === 'LISTED';
+        newDossier.listingPerformance = {
+          listingDate: isExplicitlyListed 
+            ? (webLookup.listingDate || 'Official Listing') 
+            : (webLookup.listingDate || 'Not Yet Listed (Pre-Listing Phase)'),
+          listingStatus: isExplicitlyListed ? 'LISTED' : 'UPCOMING',
+          ipoPrice: webLookup.ipoPrice,
+          openingPrice: isExplicitlyListed ? webLookup.openingPrice : undefined,
+          closingPrice: isExplicitlyListed ? webLookup.closingPrice : undefined,
+          webPriceSource: newDossier.webPriceSource,
+        };
+      }
 
       const enrichedDossier = ensureIpoValuationAndShariah(newDossier);
       onEvaluationComplete(enrichedDossier);

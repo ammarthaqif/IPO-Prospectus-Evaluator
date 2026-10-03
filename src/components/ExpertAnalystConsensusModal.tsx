@@ -112,7 +112,7 @@ export const ExpertAnalystConsensusModal: React.FC<ExpertAnalystConsensusModalPr
                 ) : (
                   <span className="flex items-center gap-1 text-amber-300">
                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                    Status: Upcoming IPO ({listing?.listingDate || 'Pending Listing'})
+                    Status: Not Yet Listed ({listing?.listingDate?.replace(/^Not Yet Listed\s*\(?/i, '').replace(/\)$/, '') || 'Pending Listing'})
                   </span>
                 )}
               </div>
