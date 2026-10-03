@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { ProspectusDossier, FinancialYearData } from '../types';
 import { ProspectusRadarComparison } from './ProspectusRadarComparison';
+import { IpoPricingAndShariahStrip } from './IpoPricingAndShariahStrip';
+import { ExpertAnalystConsensusCard } from './ExpertAnalystConsensusCard';
 
 interface DashboardOverviewProps {
   dossier: ProspectusDossier;
@@ -31,6 +33,8 @@ interface DashboardOverviewProps {
   onNavigateTab: (tab: string) => void;
   onOpenUploadModal?: () => void;
   onDeleteDossier?: (id: string) => void;
+  onOpenUpdateListingModal?: () => void;
+  onOpenAnalystModal?: () => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -40,6 +44,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onNavigateTab,
   onOpenUploadModal,
   onDeleteDossier,
+  onOpenUpdateListingModal,
+  onOpenAnalystModal,
 }) => {
   const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'margins'>('revenue');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -215,6 +221,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* IPO Issue Price, Shariah Compliance & Listing Debut Performance Strip */}
+      <IpoPricingAndShariahStrip
+        dossier={dossier}
+        onOpenUpdateListingModal={onOpenUpdateListingModal || (() => {})}
+        onOpenAnalystModal={onOpenAnalystModal || (() => {})}
+      />
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
@@ -569,6 +582,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
       </div>
+
+      {/* Top Expert Analyst Fair Values & Research Consensus Card */}
+      <ExpertAnalystConsensusCard
+        dossier={dossier}
+        onOpenUpdateListingModal={onOpenUpdateListingModal || (() => {})}
+        onOpenFullAnalystModal={onOpenAnalystModal || (() => {})}
+      />
 
       {/* Side-by-Side Prospectus Comparison & Radar Benchmark Section */}
       <div id="radar-comparison-section" className="scroll-mt-6">

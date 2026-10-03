@@ -19,6 +19,7 @@ import { ProspectusDossier } from '../types';
 import { goldLiProspectus, scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from '../data/defaultProspectus';
 import { checkDuplicateProspectus, DuplicateCheckResult } from '../utils/dossierStorage';
 import { checkCloudDuplicate } from '../services/firebase';
+import { ensureIpoValuationAndShariah } from '../utils/ipoPricingAndShariah';
 
 interface UploadProspectusModalProps {
   isOpen: boolean;
@@ -1242,7 +1243,8 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
         isCustomUpload: true,
       };
 
-      onEvaluationComplete(newDossier);
+      const enrichedDossier = ensureIpoValuationAndShariah(newDossier);
+      onEvaluationComplete(enrichedDossier);
       onClose();
     } catch (err: any) {
       console.error('Prospectus evaluation error:', err);

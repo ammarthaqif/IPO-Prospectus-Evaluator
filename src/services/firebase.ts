@@ -57,6 +57,40 @@ export interface CloudSaveResult {
 }
 
 /**
+ * Ensures a dossier object strictly stays below Google Cloud Firestore's 1,048,576 bytes limit.
+ * Truncates rawProspectusText progressively if the serialized document exceeds safe size.
+ */
+export function sanitizeDossierForFirestore(dossier: ProspectusDossier): ProspectusDossier {
+  const encoder = new TextEncoder();
+  const sanitized = { ...dossier };
+
+  const MAX_SAFE_FIRESTORE_BYTES = 750000; // 750 KB safe limit (well below 1,048,576 bytes quota)
+
+  let byteSize = encoder.encode(JSON.stringify(sanitized)).length;
+
+  if (byteSize > MAX_SAFE_FIRESTORE_BYTES) {
+    console.warn(`[Firebase] Document size (${byteSize} bytes) exceeds Firestore safe limit. Truncating rawProspectusText...`);
+
+    const progressiveLimits = [120000, 60000, 25000, 5000];
+    for (const limit of progressiveLimits) {
+      if (sanitized.rawProspectusText && sanitized.rawProspectusText.length > limit) {
+        sanitized.rawProspectusText = sanitized.rawProspectusText.slice(0, limit) + 
+          '\n\n[...Prospectus text excerpt preserved for Cloud Firestore document quota (1MB limit)...]';
+      }
+      byteSize = encoder.encode(JSON.stringify(sanitized)).length;
+      if (byteSize <= MAX_SAFE_FIRESTORE_BYTES) break;
+    }
+
+    if (byteSize > MAX_SAFE_FIRESTORE_BYTES) {
+      sanitized.rawProspectusText = '[...Prospectus OCR text omitted in Cloud document to satisfy Firestore 1MB quota. Structured financials, ratios, and audit flags preserved...]';
+    }
+  }
+
+  // Remove any undefined properties which Firestore rejects with 'Unsupported field value: undefined'
+  return JSON.parse(JSON.stringify(sanitized)) as ProspectusDossier;
+}
+
+/**
  * Checks Firestore cloud collection for duplicate entries before saving.
  */
 export async function checkCloudDuplicate(
@@ -175,8 +209,11 @@ export async function saveProspectusToCloud(
     const normReg = normalizeRegistrationNo(dossier.registrationNo || '');
     const docRef = doc(db, COLLECTION_NAME, dossier.id);
 
+    // Sanitize to stay safely under Firestore 1MB limit
+    const sanitizedDossier = sanitizeDossierForFirestore(dossier);
+
     const cloudPayload = {
-      ...dossier,
+      ...sanitizedDossier,
       normalizedCompanyName: normName,
       normalizedRegistrationNo: normReg,
       isCloudShared: true,
@@ -184,7 +221,21 @@ export async function saveProspectusToCloud(
       cloudSharedAt: new Date().toISOString(),
     };
 
-    await setDoc(docRef, cloudPayload, { merge: true });
+    try {
+      await setDoc(docRef, cloudPayload, { merge: true });
+    } catch (writeError: any) {
+      if (writeError?.message?.includes('exceeds the maximum allowed size') || writeError?.message?.includes('bytes')) {
+        console.warn('[Firebase] Retrying cloud write with stripped text payload to satisfy 1MB limit...');
+        const minimalPayload = {
+          ...cloudPayload,
+          rawProspectusText: '[...Prospectus raw text truncated to satisfy Google Cloud Firestore 1MB document quota...]',
+        };
+        await setDoc(docRef, minimalPayload, { merge: true });
+      } else {
+        throw writeError;
+      }
+    }
+
     console.info(`[Firebase] Prospectus "${dossier.companyName}" (${dossier.id}) successfully shared to Cloud storage.`);
 
     return {
@@ -267,8 +318,9 @@ export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): P
       if (!existing.exists()) {
         const normName = normalizeCompanyName(d.companyName);
         const normReg = normalizeRegistrationNo(d.registrationNo || '');
+        const sanitized = sanitizeDossierForFirestore(d);
         await setDoc(docRef, {
-          ...d,
+          ...sanitized,
           normalizedCompanyName: normName,
           normalizedRegistrationNo: normReg,
           isCloudShared: true,

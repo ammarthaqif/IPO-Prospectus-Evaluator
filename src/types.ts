@@ -131,6 +131,65 @@ export interface PeerGroupData {
   benchmarks: IndustryBenchmarkItem[];
 }
 
+export type ShariahStatus = 'SHARIAH_COMPLIANT' | 'NON_SHARIAH_COMPLIANT' | 'PENDING_SAC_REVIEW';
+
+export interface ShariahComplianceInfo {
+  status: ShariahStatus;
+  isCompliant: boolean;
+  screeningAuthority: string; // e.g. "Shariah Advisory Council (SAC) of the Securities Commission Malaysia"
+  sacScreeningDate?: string;
+  businessActivityBenchmark: string; // e.g. "Conventional & Non-Permissible Activities < 5% / 20% benchmark"
+  financialRatioBenchmark: string; // e.g. "Cash & Debt to Total Assets < 33% threshold"
+  notes?: string;
+  lastAuditedDate?: string;
+}
+
+export type AnalystRecommendation = 'SUBSCRIBE' | 'OVERWEIGHT' | 'BUY' | 'NEUTRAL' | 'AVOID';
+
+export interface AnalystFairValue {
+  id: string;
+  firm: string; // e.g. "Apex Securities", "PublicInvest Research", "Mercury Securities", "TA Securities", "Malacca Securities", "Rakuten Trade", "Kenanga Research"
+  analystName?: string;
+  fairValue: number; // in RM (e.g. 0.44)
+  upsidePct: number; // in % vs IPO price (e.g. +25.7%)
+  recommendation: AnalystRecommendation;
+  targetPE?: number; // e.g. 11.2x
+  targetBasis: string; // e.g. "11.2x FY25F EPS", "DCF with WACC 8.5%"
+  reportDate: string;
+  keyThesis: string;
+}
+
+export interface AnalystConsensus {
+  averageFairValue: number;
+  medianFairValue: number;
+  highestFairValue: number;
+  lowestFairValue: number;
+  averageUpsidePct: number;
+  totalAnalysts: number;
+  subscribeCount: number;
+  neutralCount: number;
+  avoidCount: number;
+  consensusRating: 'STRONG_SUBSCRIBE' | 'MODERATE_SUBSCRIBE' | 'NEUTRAL' | 'AVOID';
+}
+
+export interface ListingPerformance {
+  listingDate?: string; // e.g. "28 March 2026"
+  listingStatus: 'UPCOMING' | 'LISTED';
+  ipoPrice: number; // in RM (e.g. 0.35)
+  openingPrice?: number; // Debut open price (e.g. 0.46)
+  closingPrice?: number; // Day 1 close price (e.g. 0.435)
+  day1High?: number; // Day 1 intraday high (e.g. 0.49)
+  day1Low?: number; // Day 1 intraday low (e.g. 0.42)
+  day1Volume?: number; // Day 1 shares traded (e.g. 68450000)
+  firstDayGainPct?: number; // ((closingPrice - ipoPrice) / ipoPrice) * 100
+  firstDayOpeningGainPct?: number; // ((openingPrice - ipoPrice) / ipoPrice) * 100
+  intradaySpreadPct?: number;
+  marketCapAtIpoRM?: number; // in RM'000
+  peAtIpo?: number;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface ProspectusDossier {
   id: string;
   companyName: string;
@@ -172,6 +231,13 @@ export interface ProspectusDossier {
   cloudSharedAt?: string;
   normalizedCompanyName?: string;
   normalizedRegistrationNo?: string;
+
+  // Shariah Compliance, IPO Pricing & Expert Analyst Coverage
+  ipoPrice?: number;
+  shariahCompliance?: ShariahComplianceInfo;
+  analystCoverage?: AnalystFairValue[];
+  analystConsensus?: AnalystConsensus;
+  listingPerformance?: ListingPerformance;
 
   // Extended dynamic fields
   fundManagerVerdict?: FundManagerVerdict;

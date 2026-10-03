@@ -1,9 +1,13 @@
-import { ProspectusDossier } from '../types';
+import { ProspectusDossier, ListingPerformance } from '../types';
 import { 
   goldLiProspectus,
   stratusGlobalProspectus, 
   scaSolutionsProspectus 
 } from '../data/defaultProspectus';
+import { 
+  ensureIpoValuationAndShariah, 
+  computeListingMetrics 
+} from './ipoPricingAndShariah';
 
 const DOSSIERS_STORAGE_KEY = 'ipo_evaluator_dossiers_v2';
 const ACTIVE_ID_STORAGE_KEY = 'ipo_evaluator_active_dossier_id_v2';
@@ -213,10 +217,11 @@ export function loadStoredDossiers(): ProspectusDossier[] {
 
     // Combine custom dossiers followed by non-deleted defaults
     const merged = [...customDossiers, ...activeDefaults];
-    return merged.length > 0 ? merged : [stratusGlobalProspectus];
+    const normalized = (merged.length > 0 ? merged : [stratusGlobalProspectus]).map(ensureIpoValuationAndShariah);
+    return normalized;
   } catch (err) {
     console.warn('[DossierStorage] Failed to read from localStorage, using defaults:', err);
-    return DEFAULT_DOSSIERS;
+    return DEFAULT_DOSSIERS.map(ensureIpoValuationAndShariah);
   }
 }
 
@@ -302,5 +307,67 @@ export function resetDossiersToDefaults(): ProspectusDossier[] {
   } catch {
     // Ignore
   }
-  return DEFAULT_DOSSIERS;
+  return DEFAULT_DOSSIERS.map(ensureIpoValuationAndShariah);
 }
+
+/**
+ * Updates the IPO issue price, listing date, open, close, and intraday prices for a specific dossier.
+ * Recomputes gain metrics and persists to localStorage.
+ */
+export function updateStoredDossierListingPerformance(
+  id: string,
+  updates: Partial<ListingPerformance>,
+  currentList: ProspectusDossier[]
+): { updatedList: ProspectusDossier[]; updatedDossier: ProspectusDossier | null } {
+  let target: ProspectusDossier | null = null;
+
+  const updatedList = currentList.map((d) => {
+    if (d.id !== id) return d;
+
+    const currentPerf = d.listingPerformance || {
+      listingStatus: 'UPCOMING',
+      ipoPrice: updates.ipoPrice || d.ipoPrice || 0.35,
+    };
+
+    const newStatus = updates.listingStatus || currentPerf.listingStatus || 'UPCOMING';
+    const isUpcoming = newStatus === 'UPCOMING';
+
+    const newIpoPrice = updates.ipoPrice !== undefined ? updates.ipoPrice : currentPerf.ipoPrice;
+    const newOpen = isUpcoming ? undefined : (updates.openingPrice !== undefined ? updates.openingPrice : currentPerf.openingPrice);
+    const newClose = isUpcoming ? undefined : (updates.closingPrice !== undefined ? updates.closingPrice : currentPerf.closingPrice);
+    const newHigh = isUpcoming ? undefined : (updates.day1High !== undefined ? updates.day1High : currentPerf.day1High);
+    const newLow = isUpcoming ? undefined : (updates.day1Low !== undefined ? updates.day1Low : currentPerf.day1Low);
+    const newVolume = isUpcoming ? undefined : (updates.day1Volume !== undefined ? updates.day1Volume : currentPerf.day1Volume);
+
+    const deltas = isUpcoming ? {} : computeListingMetrics(newIpoPrice, newOpen, newClose, newHigh, newLow);
+
+    const mergedPerf: ListingPerformance = {
+      ...currentPerf,
+      ...updates,
+      listingStatus: newStatus,
+      ipoPrice: newIpoPrice,
+      openingPrice: newOpen,
+      closingPrice: newClose,
+      day1High: newHigh,
+      day1Low: newLow,
+      day1Volume: newVolume,
+      firstDayGainPct: deltas.firstDayGainPct,
+      firstDayOpeningGainPct: deltas.firstDayOpeningGainPct,
+      intradaySpreadPct: deltas.intradaySpreadPct,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedDossier: ProspectusDossier = {
+      ...d,
+      ipoPrice: newIpoPrice,
+      listingPerformance: mergedPerf,
+    };
+
+    target = updatedDossier;
+    return updatedDossier;
+  });
+
+  saveStoredDossiers(updatedList);
+  return { updatedList, updatedDossier: target };
+}
+

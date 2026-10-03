@@ -7,9 +7,11 @@ import { AiSentimentRedFlagsView } from './components/AiSentimentRedFlagsView';
 import { PdfReportGenerator } from './components/PdfReportGenerator';
 import { ProspectusDocumentViewer } from './components/ProspectusDocumentViewer';
 import { UploadProspectusModal } from './components/UploadProspectusModal';
+import { UpdateListingPriceModal } from './components/UpdateListingPriceModal';
+import { ExpertAnalystConsensusModal } from './components/ExpertAnalystConsensusModal';
 import { InstitutionalFooter } from './components/InstitutionalFooter';
 import { stratusGlobalProspectus, goldLiProspectus } from './data/defaultProspectus';
-import { ProspectusDossier } from './types';
+import { ProspectusDossier, ListingPerformance } from './types';
 import { 
   loadStoredDossiers, 
   saveStoredDossiers, 
@@ -17,6 +19,7 @@ import {
   saveActiveDossierId, 
   deleteStoredDossier, 
   resetDossiersToDefaults,
+  updateStoredDossierListingPerformance,
   checkDuplicateProspectus,
   getDeletedDossierIds,
   DEFAULT_DOSSIERS
@@ -51,6 +54,8 @@ export default function App() {
   });
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+  const [isUpdateListingModalOpen, setIsUpdateListingModalOpen] = useState<boolean>(false);
+  const [isAnalystModalOpen, setIsAnalystModalOpen] = useState<boolean>(false);
 
   // Background real-time sync with Google Cloud Firestore and server
   useEffect(() => {
@@ -215,6 +220,28 @@ export default function App() {
     handleSelectDossier(defaults[0]);
   };
 
+  const handleUpdateListingPerformance = async (updates: Partial<ListingPerformance>) => {
+    const { updatedList, updatedDossier } = updateStoredDossierListingPerformance(
+      currentDossier.id,
+      updates,
+      dossiers
+    );
+    setDossiers(updatedList);
+    if (updatedDossier) {
+      setCurrentDossier(updatedDossier);
+      // Persist to Cloud Firestore so all users see the updated open/close prices
+      saveProspectusToCloud(updatedDossier).catch((err) => {
+        console.warn('[Firebase listing price sync notice]:', err);
+      });
+      // Sync with express backend cache if present
+      fetch('/api/dossiers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedDossier),
+      }).catch(() => {});
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       
@@ -228,6 +255,7 @@ export default function App() {
         onOpenUploadModal={() => setIsUploadModalOpen(true)}
         onDeleteDossier={handleDeleteDossier}
         onResetDefaults={handleResetDefaults}
+        onOpenUpdateListingModal={() => setIsUpdateListingModalOpen(true)}
         isCloudLive={isCloudLive}
         cloudDossiersCount={cloudCount}
       />
@@ -243,6 +271,8 @@ export default function App() {
             onNavigateTab={setActiveTab}
             onOpenUploadModal={() => setIsUploadModalOpen(true)}
             onDeleteDossier={handleDeleteDossier}
+            onOpenUpdateListingModal={() => setIsUpdateListingModalOpen(true)}
+            onOpenAnalystModal={() => setIsAnalystModalOpen(true)}
           />
         )}
 
@@ -285,6 +315,22 @@ export default function App() {
         onEvaluationComplete={handleEvaluationComplete}
         onSelectSample={handleSelectSample}
         existingDossiers={dossiers}
+      />
+
+      {/* Update Listing Date, Open & Close Prices Modal */}
+      <UpdateListingPriceModal
+        isOpen={isUpdateListingModalOpen}
+        onClose={() => setIsUpdateListingModalOpen(false)}
+        dossier={currentDossier}
+        onUpdateListing={handleUpdateListingPerformance}
+      />
+
+      {/* Expert Analyst Fair Value Consensus Modal */}
+      <ExpertAnalystConsensusModal
+        isOpen={isAnalystModalOpen}
+        onClose={() => setIsAnalystModalOpen(false)}
+        dossier={currentDossier}
+        onOpenUpdateListingModal={() => setIsUpdateListingModalOpen(true)}
       />
 
       {/* Institutional Footer with Developer Credits, Methodology & Regulatory Disclosures */}

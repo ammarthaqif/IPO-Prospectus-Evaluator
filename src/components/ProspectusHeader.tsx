@@ -19,7 +19,7 @@ import {
 import { ProspectusDossier } from '../types';
 import { DossierSwitcherModal } from './DossierSwitcherModal';
 import { AboutPlatformModal } from './AboutPlatformModal';
-import { Info } from 'lucide-react';
+import { Info, Edit3, ShieldCheck } from 'lucide-react';
 
 interface ProspectusHeaderProps {
   currentDossier: ProspectusDossier;
@@ -30,6 +30,7 @@ interface ProspectusHeaderProps {
   onOpenUploadModal: () => void;
   onDeleteDossier?: (id: string) => void;
   onResetDefaults?: () => void;
+  onOpenUpdateListingModal?: () => void;
   isCloudLive?: boolean;
   cloudDossiersCount?: number;
 }
@@ -43,6 +44,7 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
   onOpenUploadModal,
   onDeleteDossier,
   onResetDefaults,
+  onOpenUpdateListingModal,
   isCloudLive = true,
   cloudDossiersCount,
 }) => {
@@ -109,6 +111,25 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
                       <span className="text-[10px] font-mono text-slate-400 bg-slate-900/90 px-1.5 py-0.5 rounded shrink-0">
                         {(currentDossier.registrationNo || 'SEC/BURSA').split(' ')[0]}
                       </span>
+                      {currentDossier.shariahCompliance?.isCompliant && (
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0" title="Classified as Shariah-compliant by the SAC of Securities Commission Malaysia">
+                          <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                          <span>Shariah</span>
+                        </span>
+                      )}
+                      <span className="hidden md:inline-flex items-center text-[10px] font-mono font-bold text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 shrink-0">
+                        IPO: {currentDossier.currencySymbol || 'RM'}{(currentDossier.ipoPrice || 0.35).toFixed(2)}
+                      </span>
+                      {currentDossier.listingPerformance?.listingStatus === 'LISTED' && currentDossier.listingPerformance?.closingPrice ? (
+                        <span className="hidden lg:inline-flex items-center text-[10px] font-mono font-bold text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">
+                          Day 1: {currentDossier.currencySymbol || 'RM'}{currentDossier.listingPerformance.closingPrice.toFixed(2)} ({currentDossier.listingPerformance.firstDayGainPct !== undefined && currentDossier.listingPerformance.firstDayGainPct >= 0 ? '+' : ''}{currentDossier.listingPerformance.firstDayGainPct}%)
+                        </span>
+                      ) : (
+                        <span className="hidden lg:inline-flex items-center gap-1 text-[10px] font-mono font-bold text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0" title="Not yet listed on Bursa Malaysia">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                          Upcoming IPO
+                        </span>
+                      )}
                     </div>
                     <div className="text-[10px] sm:text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-[280px]">
                       {currentDossier.sector}
@@ -125,6 +146,17 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
 
             {/* Right Action: Quick Actions & PDF Upload */}
             <div className="order-2 sm:order-3 flex items-center gap-2 shrink-0">
+              {onOpenUpdateListingModal && (
+                <button
+                  type="button"
+                  onClick={onOpenUpdateListingModal}
+                  className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 hover:text-white transition-all cursor-pointer"
+                  title="Update IPO Open and Closing Prices on Listing Date"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="whitespace-nowrap">Listing Prices</span>
+                </button>
+              )}
               <button
                 onClick={onOpenUploadModal}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-xs font-semibold text-white shadow-md shadow-indigo-600/30 transition-all border border-indigo-400/30 cursor-pointer active:scale-95"

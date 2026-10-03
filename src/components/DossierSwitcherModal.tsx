@@ -199,6 +199,25 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
                           ACE / Main Market (M&E)
                         </span>
                       )}
+                      {dossier.shariahCompliance?.isCompliant && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                          ✓ Shariah
+                        </span>
+                      )}
+                      {dossier.ipoPrice && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-indigo-300 border border-slate-700 font-mono">
+                          IPO: RM {dossier.ipoPrice.toFixed(2)}
+                        </span>
+                      )}
+                      {dossier.listingPerformance?.listingStatus === 'LISTED' && dossier.listingPerformance?.closingPrice ? (
+                        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 font-mono">
+                          Day 1: RM {dossier.listingPerformance.closingPrice.toFixed(2)} ({dossier.listingPerformance.firstDayGainPct !== undefined && dossier.listingPerformance.firstDayGainPct >= 0 ? '+' : ''}{dossier.listingPerformance.firstDayGainPct}%)
+                        </span>
+                      ) : (
+                        <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950/40 text-amber-300 border border-amber-500/30 font-mono">
+                          ⏳ Upcoming ({dossier.listingPerformance?.listingDate || 'Pre-Listing'})
+                        </span>
+                      )}
                       {!['gold-li-2026', 'stratus-global-2026', 'sca-solutions-2025'].includes(dossier.id) && (
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
                           <FileCheck2 className="w-3 h-3 text-indigo-400" /> Custom Evaluated
