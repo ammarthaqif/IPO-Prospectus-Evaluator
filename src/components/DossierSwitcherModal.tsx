@@ -151,7 +151,7 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
 
         {/* Scrollable Dossier Cards List */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 flex-1 divide-y divide-slate-800/40">
-          {filteredDossiers.map(dossier => {
+          {filteredDossiers.map((dossier, idx) => {
             const isSelected = dossier.id === currentDossier.id;
             const latestFin = dossier.financials && dossier.financials.length > 0 
               ? dossier.financials[dossier.financials.length - 1] 
@@ -161,7 +161,7 @@ export const DossierSwitcherModal: React.FC<DossierSwitcherModalProps> = ({
 
             return (
               <div
-                key={dossier.id}
+                key={`dossier-card-${dossier.id}-${idx}`}
                 onClick={() => {
                   onSelectDossier(dossier);
                   onClose();

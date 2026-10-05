@@ -49,9 +49,9 @@ export default function App() {
     const savedActiveId = loadActiveDossierId();
     if (savedActiveId) {
       const found = initialList.find(d => d.id === savedActiveId);
-      if (found) return found;
+      if (found) return ensureIpoValuationAndShariah(found);
     }
-    return initialList[0] || goldLiProspectus;
+    return ensureIpoValuationAndShariah(initialList[0] || goldLiProspectus);
   });
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
@@ -129,7 +129,8 @@ export default function App() {
   }, []);
 
   const handleSelectDossier = (dossier: ProspectusDossier) => {
-    setCurrentDossier(dossier);
+    const normalized = ensureIpoValuationAndShariah(dossier);
+    setCurrentDossier(normalized);
     saveActiveDossierId(dossier.id);
   };
 
@@ -281,6 +282,14 @@ export default function App() {
             onDeleteDossier={handleDeleteDossier}
             onOpenUpdateListingModal={() => setIsUpdateListingModalOpen(true)}
             onOpenAnalystModal={() => setIsAnalystModalOpen(true)}
+            onUpdateDossier={(updatedDossier) => {
+              handleSelectDossier(updatedDossier);
+              setDossiers(prev => {
+                const updatedList = prev.map(d => d.id === updatedDossier.id ? updatedDossier : d);
+                saveStoredDossiers(updatedList);
+                return updatedList;
+              });
+            }}
           />
         )}
 
@@ -289,7 +298,18 @@ export default function App() {
         )}
 
         {activeTab === 'benchmarks' && (
-          <IndustryBenchmarksView key={currentDossier.id} dossier={currentDossier} />
+          <IndustryBenchmarksView 
+            key={currentDossier.id} 
+            dossier={currentDossier} 
+            onUpdateDossier={(updatedDossier) => {
+              handleSelectDossier(updatedDossier);
+              setDossiers(prev => {
+                const updatedList = prev.map(d => d.id === updatedDossier.id ? updatedDossier : d);
+                saveStoredDossiers(updatedList);
+                return updatedList;
+              });
+            }}
+          />
         )}
 
         {activeTab === 'redflags' && (

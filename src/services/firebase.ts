@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
+  initializeFirestore,
   collection, 
   doc, 
   getDocs, 
@@ -10,7 +11,6 @@ import {
   query, 
   where, 
   onSnapshot, 
-  getDocFromServer,
   Unsubscribe 
 } from 'firebase/firestore';
 import type { ProspectusDossier } from '../types';
@@ -20,33 +20,39 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase App instance singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Use named Firestore database if specified in config, fallback to default
-export const db = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+// Configure Firestore with long polling enabled to prevent Cloud Run/proxy WebChannel streaming timeouts
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(
+    app,
+    {
+      experimentalForceLongPolling: true,
+      experimentalAutoDetectLongPolling: true,
+    },
+    firebaseConfig.firestoreDatabaseId || undefined
+  );
+} catch {
+  firestoreInstance = firebaseConfig.firestoreDatabaseId 
+    ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
+    : getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 const COLLECTION_NAME = 'prospectusDossiers';
 
 /**
- * Validates active connection to Firestore server on boot.
+ * Validates active connection to Firestore server without throwing unhandled timeout exceptions.
  */
 export async function validateFirestoreConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.info('[Firebase] Firestore connected successfully to cloud database.');
+    const testDoc = doc(db, 'test', 'connection');
+    await getDoc(testDoc);
     return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('[Firebase] Client is offline or Firestore is unreachable.');
-    } else {
-      console.info('[Firebase] Connection handshake completed.');
-    }
-    return true;
+  } catch {
+    return false;
   }
 }
-
-// Kick off validation on module load
-validateFirestoreConnection().catch(() => {});
 
 export interface CloudSaveResult {
   success: boolean;
@@ -297,7 +303,11 @@ export function subscribeToCloudDossiers(
       onUpdate(list);
     },
     (err) => {
-      console.warn('[Firebase] Realtime cloud listener warning:', err);
+      if (err.message && (err.message.includes('offline') || err.message.includes('backend'))) {
+        console.info('[Firebase] Operating in resilient offline mode with local dossier store.');
+      } else {
+        console.warn('[Firebase] Realtime cloud listener notice:', err);
+      }
       if (onError) onError(err);
     }
   );
@@ -305,9 +315,14 @@ export function subscribeToCloudDossiers(
 
 /**
  * Seeds baseline default dossiers into the Cloud database if not already present.
+ * Uses a safe timeout so cold boots and offline modes never stall.
  */
 export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): Promise<void> {
-  try {
+  const timeoutPromise = new Promise<void>((_, reject) => 
+    setTimeout(() => reject(new Error('Seed timeout')), 3500)
+  );
+
+  const seedPromise = (async () => {
     const deletedIds = getDeletedDossierIds();
     for (const d of defaults) {
       if (deletedIds.has(d.id) || d.id === 'cloudnexus-2025' || d.id === 'sample-saas-2024') {
@@ -330,8 +345,12 @@ export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): P
       }
     }
     console.info('[Firebase] Baseline default dossiers verified in Cloud database.');
-  } catch (err) {
-    console.warn('[Firebase] Cloud seeding skipped or offline:', err);
+  })();
+
+  try {
+    await Promise.race([seedPromise, timeoutPromise]);
+  } catch {
+    // Offline or timed out - local storage maintains immediate responsiveness
   }
 }
 

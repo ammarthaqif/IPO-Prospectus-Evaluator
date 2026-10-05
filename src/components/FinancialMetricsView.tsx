@@ -307,8 +307,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                 <thead>
                   <tr className="bg-slate-950/60 text-slate-400 font-mono border-b border-slate-800">
                     <th className="py-3 px-5 font-semibold text-slate-300">Financial Metric</th>
-                    {financials.map(f => (
-                      <th key={f.period} className="py-3 px-5 text-right font-semibold text-slate-300">
+                    {financials.map((f, idx) => (
+                      <th key={`fm-head-${f.period}-${idx}`} className="py-3 px-5 text-right font-semibold text-slate-300">
                         {f.period}
                       </th>
                     ))}
@@ -332,8 +332,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                       <span className="w-2 h-2 rounded-full bg-indigo-500" />
                       Revenue
                     </td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right font-medium text-white">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-rev-${f.period}-${idx}`} className="py-3 px-5 text-right font-medium text-white">
                         {f.revenue.toLocaleString()}
                       </td>
                     ))}
@@ -362,8 +362,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* Cost of Sales */}
                   <tr className="hover:bg-slate-800/30 transition-colors text-slate-400">
                     <td className="py-3 px-5 font-sans">Cost of Sales</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right text-rose-400">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-cos-${f.period}-${idx}`} className="py-3 px-5 text-right text-rose-400">
                         ({Math.abs(f.costOfSales).toLocaleString()})
                       </td>
                     ))}
@@ -382,8 +382,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                       <span className="w-2 h-2 rounded-full bg-emerald-400" />
                       Gross Profit (GP)
                     </td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right font-bold text-white">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-gp-${f.period}-${idx}`} className="py-3 px-5 text-right font-bold text-white">
                         {f.gp.toLocaleString()}
                       </td>
                     ))}
@@ -408,8 +408,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* GP Margin */}
                   <tr className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 px-5 font-sans text-slate-300">GP Margin (%)</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right font-semibold text-emerald-400">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-gpm-${f.period}-${idx}`} className="py-3 px-5 text-right font-semibold text-emerald-400">
                         {f.gpMargin.toFixed(2)}%
                       </td>
                     ))}
@@ -433,8 +433,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* PBT */}
                   <tr className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 px-5 font-sans text-slate-300">Profit Before Tax (PBT)</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right text-slate-200">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-pbt-${f.period}-${idx}`} className="py-3 px-5 text-right text-slate-200">
                         {f.pbt.toLocaleString()}
                       </td>
                     ))}
@@ -452,8 +452,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* PBT Margin */}
                   <tr className="hover:bg-slate-800/30 transition-colors text-slate-400">
                     <td className="py-3 px-5 font-sans">PBT Margin (%)</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-pbtm-${f.period}-${idx}`} className="py-3 px-5 text-right">
                         {f.pbtMargin.toFixed(2)}%
                       </td>
                     ))}
@@ -481,8 +481,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                       Profit After Tax (PAT)
                     </td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right font-bold text-emerald-300 text-sm">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-pat-${f.period}-${idx}`} className="py-3 px-5 text-right font-bold text-emerald-300 text-sm">
                         {f.pat.toLocaleString()}
                       </td>
                     ))}
@@ -507,8 +507,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* PAT Margin */}
                   <tr className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 px-5 font-sans text-slate-300">PAT Margin (%)</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right font-semibold text-emerald-400">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-patm-${f.period}-${idx}`} className="py-3 px-5 text-right font-semibold text-emerald-400">
                         {f.patMargin.toFixed(2)}%
                       </td>
                     ))}
@@ -532,8 +532,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* Current Ratio */}
                   <tr className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 px-5 font-sans text-slate-300">Current Ratio (times)</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right text-slate-300 font-semibold">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-cr-${f.period}-${idx}`} className="py-3 px-5 text-right text-slate-300 font-semibold">
                         {f.currentRatio.toFixed(2)}x
                       </td>
                     ))}
@@ -558,8 +558,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {/* Gearing Ratio */}
                   <tr className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 px-5 font-sans text-slate-300">Gearing Ratio (times)</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right text-indigo-300 font-semibold">
+                    {financials.map((f, idx) => (
+                      <td key={`fm-gr-${f.period}-${idx}`} className="py-3 px-5 text-right text-indigo-300 font-semibold">
                         {f.gearingRatio.toFixed(2)}x
                       </td>
                     ))}
@@ -834,8 +834,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
 
             {/* Cycle Comparison Bars */}
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4">
-              {financials.map((fin) => (
-                <div key={fin.period} className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              {financials.map((fin, idx) => (
+                <div key={`ccc-card-${fin.period}-${idx}`} className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-white text-xs">{fin.period}</span>
                     <span className="text-xs font-mono font-bold text-purple-400">{fin.cashConversionCycleDays} Days</span>
@@ -895,8 +895,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                 <thead>
                   <tr className="bg-slate-950/60 text-slate-400 font-mono border-b border-slate-800">
                     <th className="py-3 px-5 font-semibold text-slate-300">Business Segment</th>
-                    {financials.map(f => (
-                      <th key={f.period} className="py-3 px-5 text-right font-semibold text-slate-300">
+                    {financials.map((f, idx) => (
+                      <th key={`seg-th-${f.period}-${idx}`} className="py-3 px-5 text-right font-semibold text-slate-300">
                         {f.period} ({currency}'000)
                       </th>
                     ))}
@@ -907,7 +907,7 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   {segments.map((seg, sIdx) => {
                     const latestPct = seg.fpe2025Pct || seg.fy2024Pct || (sIdx === 0 ? 55 : 45);
                     return (
-                      <tr key={seg.segment} className="hover:bg-slate-800/30 transition-colors">
+                      <tr key={`seg-row-${seg.segment}-${sIdx}`} className="hover:bg-slate-800/30 transition-colors">
                         <td className="py-3 px-5 font-sans font-medium text-slate-200">
                           <div>{seg.segment}</div>
                           {seg.subSegment && (
@@ -918,7 +918,7 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                           const val = fIdx === 0 ? seg.fy2022 : fIdx === 1 ? seg.fy2023 : fIdx === 2 ? seg.fy2024 : (seg.fpe2025 || seg.fy2024);
                           const computedVal = val || Math.round(f.revenue * (latestPct / 100));
                           return (
-                            <td key={f.period} className="py-3 px-5 text-right text-slate-300">
+                            <td key={`seg-td-${f.period}-${fIdx}`} className="py-3 px-5 text-right text-slate-300">
                               {computedVal.toLocaleString()}
                             </td>
                           );
@@ -931,8 +931,8 @@ export const FinancialMetricsView: React.FC<FinancialMetricsViewProps> = ({ doss
                   })}
                   <tr className="bg-slate-950 font-bold border-t-2 border-slate-700">
                     <td className="py-3 px-5 font-sans text-white">Total Group Revenue</td>
-                    {financials.map(f => (
-                      <td key={f.period} className="py-3 px-5 text-right text-emerald-400">
+                    {financials.map((f, fIdx) => (
+                      <td key={`seg-tot-${f.period}-${fIdx}`} className="py-3 px-5 text-right text-emerald-400">
                         {f.revenue.toLocaleString()} (100%)
                       </td>
                     ))}

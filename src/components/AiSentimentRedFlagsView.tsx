@@ -20,6 +20,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { ProspectusDossier, RegulatoryRedFlag, RedFlagSeverity, RedFlagCategory } from '../types';
+import { MarketSentimentTimelineChart } from './MarketSentimentTimelineChart';
 
 interface AiSentimentRedFlagsViewProps {
   dossier: ProspectusDossier;
@@ -240,6 +241,12 @@ export const AiSentimentRedFlagsView: React.FC<AiSentimentRedFlagsViewProps> = (
 
       </div>
 
+      {/* Market Sentiment Score Over Time - Interactive Timeline Line Chart */}
+      <MarketSentimentTimelineChart 
+        dossier={dossier} 
+        onUpdateDossier={onUpdateDossier} 
+      />
+
       {/* Main Red Flag Matrix */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -286,14 +293,14 @@ export const AiSentimentRedFlagsView: React.FC<AiSentimentRedFlagsViewProps> = (
 
         {/* Red Flag Accordion Items */}
         <div className="space-y-3">
-          {filteredFlags.map((flag) => {
+          {filteredFlags.map((flag, idx) => {
             const isExpanded = expandedFlagId === flag.id;
             const isCritical = flag.severity === 'CRITICAL';
             const isHigh = flag.severity === 'HIGH';
 
             return (
               <div 
-                key={flag.id}
+                key={`redflag-item-${flag.id || idx}-${idx}`}
                 className={`rounded-xl border transition-all ${
                   isCritical 
                     ? 'bg-rose-950/15 border-rose-500/40 hover:border-rose-500/70' 

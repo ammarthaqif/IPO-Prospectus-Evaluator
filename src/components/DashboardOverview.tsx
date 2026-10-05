@@ -25,6 +25,7 @@ import { ProspectusDossier, FinancialYearData } from '../types';
 import { ProspectusRadarComparison } from './ProspectusRadarComparison';
 import { IpoPricingAndShariahStrip } from './IpoPricingAndShariahStrip';
 import { ExpertAnalystConsensusCard } from './ExpertAnalystConsensusCard';
+import { MarketSentimentTimelineChart } from './MarketSentimentTimelineChart';
 
 interface DashboardOverviewProps {
   dossier: ProspectusDossier;
@@ -35,6 +36,7 @@ interface DashboardOverviewProps {
   onDeleteDossier?: (id: string) => void;
   onOpenUpdateListingModal?: () => void;
   onOpenAnalystModal?: () => void;
+  onUpdateDossier?: (updated: ProspectusDossier) => void;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -46,6 +48,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onDeleteDossier,
   onOpenUpdateListingModal,
   onOpenAnalystModal,
+  onUpdateDossier,
 }) => {
   const [chartMetric, setChartMetric] = useState<'revenue' | 'profit' | 'margins'>('revenue');
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -376,7 +379,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   const revHeight = (fin.revenue / maxRevenue) * 100;
                   const gpHeight = (fin.gp / maxRevenue) * 100;
                   return (
-                    <div key={fin.period} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                    <div key={`chart-rev-${fin.period}-${idx}`} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                       <div className="text-[11px] font-mono font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-all bg-slate-800 px-1.5 py-0.5 rounded shadow">
                         RM{(fin.revenue / 1000).toFixed(1)}M
                       </div>
@@ -408,8 +411,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
             {chartMetric === 'margins' && (
               <div className="h-full min-w-[280px] sm:min-w-[420px] flex items-end justify-between gap-4 sm:gap-8 px-2 sm:px-6 border-b border-slate-800 pb-2">
-                {financials.map((fin) => (
-                  <div key={fin.period} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                {financials.map((fin, idx) => (
+                  <div key={`chart-mar-${fin.period}-${idx}`} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                     <div className="w-full flex items-end justify-center gap-2 h-48">
                       {/* GP Margin bar */}
                       <div 
@@ -441,11 +444,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
             {chartMetric === 'profit' && (
               <div className="h-full flex items-end justify-between gap-4 sm:gap-8 px-2 sm:px-6 border-b border-slate-800 pb-2">
-                {financials.map((fin) => {
+                {financials.map((fin, idx) => {
                   const pbtH = (fin.pbt / maxProfit) * 100;
                   const patH = (fin.pat / maxProfit) * 100;
                   return (
-                    <div key={fin.period} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                    <div key={`chart-prof-${fin.period}-${idx}`} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                       <div className="w-full flex items-end justify-center gap-2 h-48">
                         <div 
                           style={{ height: `${pbtH}%` }} 
@@ -546,7 +549,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 const segColor = colors[sIdx % colors.length];
 
                 return (
-                  <div key={seg.segment} className="space-y-1">
+                  <div key={`seg-${seg.segment || 'item'}-${sIdx}`} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5 truncate max-w-[200px]">
                         <div className={`w-2.5 h-2.5 rounded-full ${segColor}`} />
@@ -600,6 +603,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         />
       </div>
 
+      {/* Market Sentiment Score Over Time - Interactive Milestone Trajectory */}
+      <MarketSentimentTimelineChart 
+        dossier={dossier}
+        onUpdateDossier={onUpdateDossier}
+      />
+
       {/* Critical Red Flag Strip & Due Diligence Alerts */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between">
@@ -621,9 +630,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {criticalFlags.slice(0, 2).map((flag) => (
+          {criticalFlags.slice(0, 2).map((flag, idx) => (
             <div 
-              key={flag.id}
+              key={`dash-crit-flag-${flag.id || idx}-${idx}`}
               onClick={() => onNavigateTab('redflags')}
               className="p-4 rounded-xl bg-slate-950/60 border border-rose-500/30 hover:border-rose-500/60 cursor-pointer transition-all space-y-2 group"
             >
@@ -719,7 +728,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <div className="space-y-2.5">
             {dossier.proceeds.map((item, idx) => (
-              <div key={idx} className="space-y-1">
+              <div key={`dash-proceed-${item.purpose || idx}-${idx}`} className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-300 font-medium">{item.purpose}</span>
                   <div className="flex items-center gap-2 font-mono">

@@ -223,6 +223,15 @@ function parseProspectusClientHeuristically(text: string, companyHint?: string):
 
   // 6. Dynamic Financial Fallback if no full multi-column table
   let financials = extractedRows;
+  if (financials.length > 0) {
+    const pCounts = new Map<string, number>();
+    financials = financials.map((f, idx) => {
+      const p = (f.period || `Period ${idx + 1}`).trim();
+      const c = (pCounts.get(p) || 0) + 1;
+      pCounts.set(p, c);
+      return c > 1 ? { ...f, period: `${p} (${c})` } : { ...f, period: p };
+    });
+  }
   if (financials.length === 0) {
     const yearMatches = [...text.matchAll(/(?:FYE?|FY|FPE|Year\s+ended)\s*(\d{4})/gi)].map(m => m[1]);
     const uniqueYears = Array.from(new Set(yearMatches)).sort();
@@ -1034,6 +1043,15 @@ export const UploadProspectusModal: React.FC<UploadProspectusModalProps> = ({
           ];
         }
       }
+
+      // Ensure strictly unique period strings to prevent React duplicate key collision
+      const pMap = new Map<string, number>();
+      financials = financials.map((f: any, idx: number) => {
+        const p = (f.period || `FY ${2021 + idx}`).trim();
+        const cnt = (pMap.get(p) || 0) + 1;
+        pMap.set(p, cnt);
+        return cnt > 1 ? { ...f, period: `${p} (${cnt})` } : { ...f, period: p };
+      });
 
       // Format benchmarks
       const rawBenchmarks = Array.isArray(aiData.benchmarks) ? aiData.benchmarks : [];

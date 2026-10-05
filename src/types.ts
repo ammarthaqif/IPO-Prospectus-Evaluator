@@ -76,6 +76,18 @@ export interface SectionSentiment {
   keyFinding: string;
 }
 
+export interface SentimentHistoryPoint {
+  id: string;
+  date: string; // e.g. '15 Oct 2025' or '2025-10-15'
+  phase: string; // e.g. 'Draft Exposure', 'SC Approval', 'Prospectus Launch', 'Roadshow', 'Balloting', 'Listing'
+  score: number; // -100 to +100
+  hedgingRatio?: number; // % (0-100)
+  driver: string; // Key catalyst, announcement, or sentiment driver
+  source?: 'PROSPECTUS_DISCLOSURE' | 'ANALYST_CONSENSUS' | 'RETAIL_BALLOTING' | 'NEWS_MEDIA' | 'BURSA_FILING' | 'USER_AUDIT';
+  sourceCitation?: string;
+  classification?: string;
+}
+
 export interface AISentimentReport {
   overallScore: number; // -100 to +100
   classification: 'High Conviction Bullish' | 'Cautiously Optimistic' | 'Neutral / In-Line' | 'Guarded / Defensive' | 'High Risk / Distressed';
@@ -90,6 +102,7 @@ export interface AISentimentReport {
   executiveSummary: string;
   toneAnalysis: string;
   sections: SectionSentiment[];
+  history?: SentimentHistoryPoint[];
 }
 
 export interface ProceedItem {
@@ -124,11 +137,30 @@ export interface ProspectusSectionItem {
   riskLevel?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+export interface PeerCompanyMetric {
+  id: string;
+  name: string;
+  ticker: string;
+  market?: string;
+  pe: number; // P/E valuation multiple (x)
+  pb?: number; // Price to Book multiple (x)
+  revenueGrowth: number; // % (CAGR or YoY)
+  gpMargin: number; // Gross Profit Margin (%)
+  patMargin: number; // Net Profit Margin (%)
+  roe: number; // Return on Equity (%)
+  currentRatio: number; // Current Ratio (x)
+  gearingRatio: number; // Gearing / Debt-to-Equity (x)
+  cccDays: number; // Cash Conversion Cycle (days)
+  marketCapRM?: number; // in RM Millions
+  notes?: string;
+}
+
 export interface PeerGroupData {
   id: string;
   name: string;
   description: string;
   benchmarks: IndustryBenchmarkItem[];
+  peers?: PeerCompanyMetric[];
 }
 
 export type ShariahStatus = 'SHARIAH_COMPLIANT' | 'NON_SHARIAH_COMPLIANT' | 'PENDING_SAC_REVIEW';
@@ -146,17 +178,41 @@ export interface ShariahComplianceInfo {
 
 export type AnalystRecommendation = 'SUBSCRIBE' | 'OVERWEIGHT' | 'BUY' | 'NEUTRAL' | 'AVOID';
 
+export type AnalystSourceType = 
+  | 'OFFICIAL_BROKER_REPORT' 
+  | 'PRINCIPAL_ADVISER_MANDATE' 
+  | 'FINANCIAL_PRESS_CITATION' 
+  | 'BURSA_SECTOR_COMPS' 
+  | 'PROSPECTUS_CALIBRATED_MODEL';
+
+export interface AnalystSourceVerification {
+  isVerified: boolean;
+  sourceType: AnalystSourceType;
+  sourceName: string; // e.g. "Business Today / Malacca Securities Research"
+  sourceUrl?: string; // external or internal portal URL
+  publicationDate: string;
+  verificationBadge: string; // e.g. "Verified Broker Report", "Principal Adviser Mandate", "Bursa Comps"
+  confidenceLevel: 'HIGH' | 'MEDIUM' | 'CALIBRATED';
+  citationSnippet?: string; // quote or summary from the actual publication or filing
+  methodologyDetails?: string; // detailed valuation method explanation
+}
+
 export interface AnalystFairValue {
   id: string;
   firm: string; // e.g. "Apex Securities", "PublicInvest Research", "Mercury Securities", "TA Securities", "Malacca Securities", "Rakuten Trade", "Kenanga Research"
   analystName?: string;
+  analystRole?: string;
   fairValue: number; // in RM (e.g. 0.44)
   upsidePct: number; // in % vs IPO price (e.g. +25.7%)
   recommendation: AnalystRecommendation;
   targetPE?: number; // e.g. 11.2x
   targetBasis: string; // e.g. "11.2x FY25F EPS", "DCF with WACC 8.5%"
+  valuationMethodology?: string; // "Target P/E Multiple", "Discounted Cash Flow (DCF)", "Price-to-Book (P/B)", "EV/EBITDA"
   reportDate: string;
   keyThesis: string;
+  catalysts?: string[]; // Specific upside catalysts
+  risks?: string[]; // Specific contrarian risks/concerns
+  sourceVerification?: AnalystSourceVerification;
 }
 
 export interface AnalystConsensus {
@@ -170,6 +226,13 @@ export interface AnalystConsensus {
   neutralCount: number;
   avoidCount: number;
   consensusRating: 'STRONG_SUBSCRIBE' | 'MODERATE_SUBSCRIBE' | 'NEUTRAL' | 'AVOID';
+  verifiedBrokerCount?: number;
+  sourceBreakdown?: {
+    officialBrokerReports: number;
+    adviserMandates: number;
+    bursaPeerComps: number;
+    calibratedModels: number;
+  };
 }
 
 export interface WebIpoPriceSource {

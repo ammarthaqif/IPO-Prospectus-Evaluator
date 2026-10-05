@@ -308,8 +308,8 @@ export const ProspectusRadarComparison: React.FC<ProspectusRadarComparisonProps>
                 onChange={(e) => setDossierAId(e.target.value)}
                 className="w-full appearance-none bg-slate-950 border border-indigo-500/40 hover:border-indigo-400 text-white rounded-xl px-3 py-2 pr-8 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer truncate shadow-sm"
               >
-                {availableDossiers.map((d) => (
-                  <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                {availableDossiers.map((d, idx) => (
+                  <option key={`radar-opt-a-${d.id}-${idx}`} value={d.id} className="bg-slate-900 text-white">
                     {d.companyName} ({d.listingMarket?.split(' ')[0] || 'IPO'})
                   </option>
                 ))}
@@ -340,8 +340,8 @@ export const ProspectusRadarComparison: React.FC<ProspectusRadarComparisonProps>
                 onChange={(e) => setDossierBId(e.target.value)}
                 className="w-full appearance-none bg-slate-950 border border-cyan-500/40 hover:border-cyan-400 text-white rounded-xl px-3 py-2 pr-8 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all cursor-pointer truncate shadow-sm"
               >
-                {availableDossiers.map((d) => (
-                  <option key={d.id} value={d.id} className="bg-slate-900 text-white">
+                {availableDossiers.map((d, idx) => (
+                  <option key={`radar-opt-b-${d.id}-${idx}`} value={d.id} className="bg-slate-900 text-white">
                     {d.companyName} ({d.listingMarket?.split(' ')[0] || 'IPO'})
                   </option>
                 ))}
@@ -520,7 +520,7 @@ export const ProspectusRadarComparison: React.FC<ProspectusRadarComparisonProps>
 
                 return (
                   <g
-                    key={m.key}
+                    key={`radar-axis-${m.key}-${idx}`}
                     className="cursor-pointer"
                     onMouseEnter={() => setHoveredAxis(idx)}
                     onMouseLeave={() => setHoveredAxis(null)}
@@ -656,7 +656,7 @@ export const ProspectusRadarComparison: React.FC<ProspectusRadarComparisonProps>
 
               return (
                 <div
-                  key={item.metric.key}
+                  key={`radar-det-${item.metric.key}-${idx}`}
                   onMouseEnter={() => setHoveredAxis(idx)}
                   onMouseLeave={() => setHoveredAxis(null)}
                   className={`p-3 rounded-xl transition-all border ${

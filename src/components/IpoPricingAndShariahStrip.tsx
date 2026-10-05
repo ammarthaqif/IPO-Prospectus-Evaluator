@@ -191,7 +191,7 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
                 Analyst Consensus FV
               </span>
               <span className="text-[10px] text-indigo-400 group-hover:underline flex items-center gap-0.5">
-                {dossier.analystCoverage?.length || 4} Notes <ExternalLink className="w-3 h-3" />
+                {dossier.analystCoverage?.length || 4} Desks Audited <ExternalLink className="w-3 h-3" />
               </span>
             </div>
 
@@ -214,11 +214,12 @@ export const IpoPricingAndShariahStrip: React.FC<IpoPricingAndShariahStripProps>
           </div>
 
           <div className="pt-2.5 mt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-            <span className="text-emerald-400 font-bold">
+            <span className="text-emerald-400 font-bold flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" />
               {consensus?.consensusRating === 'STRONG_SUBSCRIBE' ? '★ STRONG SUBSCRIBE' : 'SUBSCRIBE'}
             </span>
-            <span className="text-slate-400">
-              {consensus?.subscribeCount || dossier.analystCoverage?.length || 5} of {consensus?.totalAnalysts || dossier.analystCoverage?.length || 5} Buy
+            <span className="text-indigo-400 group-hover:text-indigo-300 group-hover:underline flex items-center gap-0.5 font-semibold">
+              Verify Sources →
             </span>
           </div>
         </div>

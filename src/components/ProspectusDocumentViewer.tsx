@@ -469,9 +469,9 @@ export const ProspectusDocumentViewer: React.FC<ProspectusDocumentViewerProps> =
 
               {/* Section links */}
               <div className="space-y-1 pt-1 max-h-[380px] overflow-y-auto pr-1">
-                {sections.map((sec) => (
+                {sections.map((sec, idx) => (
                   <button
-                    key={sec.id}
+                    key={`doc-sec-${sec.id || idx}-${idx}`}
                     onClick={() => setSelectedSectionId(sec.id)}
                     className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer ${
                       selectedSectionId === sec.id
@@ -494,8 +494,8 @@ export const ProspectusDocumentViewer: React.FC<ProspectusDocumentViewerProps> =
               </span>
               <ul className="space-y-1.5 text-[11px] text-slate-300">
                 {redFlags.length > 0 ? (
-                  redFlags.slice(0, 3).map((flag) => (
-                    <li key={flag.id} className="p-2 rounded bg-rose-950/20 border border-rose-500/20 space-y-0.5">
+                  redFlags.slice(0, 3).map((flag, idx) => (
+                    <li key={`doc-flag-${flag.id || idx}-${idx}`} className="p-2 rounded bg-rose-950/20 border border-rose-500/20 space-y-0.5">
                       <div className="flex items-center justify-between">
                         <strong className="text-rose-300 font-semibold">{flag.prospectusSection}:</strong>
                         <span className="text-[9px] uppercase font-mono px-1 rounded bg-rose-500/30 text-rose-200">

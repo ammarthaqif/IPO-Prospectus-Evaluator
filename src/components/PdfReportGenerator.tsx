@@ -698,6 +698,26 @@ export const PdfReportGenerator: React.FC<PdfReportGeneratorProps> = ({ dossier 
                   </div>
                   <p>{dossier.sentiment.executiveSummary}</p>
                 </div>
+
+                {/* Milestone Trajectory Summary */}
+                {dossier.sentiment.history && dossier.sentiment.history.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200">
+                    <div className="text-[10px] font-mono uppercase font-bold text-slate-700 mb-1">
+                      Market Sentiment Score Trajectory Across Regulatory Milestones
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 font-mono text-[10px]">
+                      {dossier.sentiment.history.map((pt, pIdx) => (
+                        <div key={`pdf-sent-pt-${pt.id || pIdx}-${pIdx}`} className="p-1.5 rounded bg-slate-50 border border-slate-200">
+                          <div className="text-slate-500 truncate text-[9px]">{pt.date}</div>
+                          <div className="font-bold text-slate-900 truncate text-[10px]">{pt.phase}</div>
+                          <div className={`font-bold mt-0.5 ${pt.score >= 50 ? 'text-emerald-700' : pt.score >= 0 ? 'text-indigo-800' : 'text-rose-700'}`}>
+                            {pt.score >= 0 ? `+${pt.score}` : pt.score} / 100
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -739,52 +759,52 @@ export const PdfReportGenerator: React.FC<PdfReportGeneratorProps> = ({ dossier 
                     <thead>
                       <tr className="border-b-2 border-slate-300 text-slate-700 font-bold">
                         <th className="py-1.5">Line Item</th>
-                        {dossier.financials.map(f => (
-                          <th key={f.period} className="py-1.5 text-right">{f.period}</th>
+                        {dossier.financials.map((f, idx) => (
+                          <th key={`pdf-head-${f.period}-${idx}`} className="py-1.5 text-right">{f.period}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       <tr>
                         <td className="py-1.5 font-bold">Revenue</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right">{f.revenue.toLocaleString()}</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-rev-${f.period}-${idx}`} className="py-1.5 text-right">{f.revenue.toLocaleString()}</td>
                         ))}
                       </tr>
                       <tr>
                         <td className="py-1.5 font-bold text-indigo-900">Gross Profit (GP)</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right font-bold text-indigo-900">{f.gp.toLocaleString()}</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-gp-${f.period}-${idx}`} className="py-1.5 text-right font-bold text-indigo-900">{f.gp.toLocaleString()}</td>
                         ))}
                       </tr>
                       <tr>
                         <td className="py-1.5">GP Margin (%)</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right font-semibold text-emerald-700">{f.gpMargin}%</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-gpm-${f.period}-${idx}`} className="py-1.5 text-right font-semibold text-emerald-700">{f.gpMargin}%</td>
                         ))}
                       </tr>
                       <tr>
                         <td className="py-1.5 font-bold text-emerald-900">Profit After Tax (PAT)</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right font-bold text-emerald-900">{f.pat.toLocaleString()}</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-pat-${f.period}-${idx}`} className="py-1.5 text-right font-bold text-emerald-900">{f.pat.toLocaleString()}</td>
                         ))}
                       </tr>
                       <tr>
                         <td className="py-1.5">PAT Margin (%)</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right">{f.patMargin}%</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-patm-${f.period}-${idx}`} className="py-1.5 text-right">{f.patMargin}%</td>
                         ))}
                       </tr>
                       <tr>
                         <td className="py-1.5">Current Ratio / Gearing</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right">{f.currentRatio}x / {f.gearingRatio}x</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-cr-${f.period}-${idx}`} className="py-1.5 text-right">{f.currentRatio}x / {f.gearingRatio}x</td>
                         ))}
                       </tr>
                       <tr>
                         <td className="py-1.5">Cash Conversion Cycle (CCC)</td>
-                        {dossier.financials.map(f => (
-                          <td key={f.period} className="py-1.5 text-right font-semibold text-purple-800">{f.cashConversionCycleDays} days</td>
+                        {dossier.financials.map((f, idx) => (
+                          <td key={`pdf-ccc-${f.period}-${idx}`} className="py-1.5 text-right font-semibold text-purple-800">{f.cashConversionCycleDays} days</td>
                         ))}
                       </tr>
                     </tbody>
@@ -801,8 +821,8 @@ export const PdfReportGenerator: React.FC<PdfReportGeneratorProps> = ({ dossier 
                 </h3>
 
                 <div className="space-y-2 text-xs">
-                  {dossier.redFlags.map(flag => (
-                    <div key={flag.id} className="p-2.5 rounded border border-rose-200 bg-rose-50/40 space-y-1">
+                  {dossier.redFlags.map((flag, idx) => (
+                    <div key={`pdf-flag-${flag.id || idx}-${idx}`} className="p-2.5 rounded border border-rose-200 bg-rose-50/40 space-y-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 bg-rose-200 text-rose-800 rounded">
