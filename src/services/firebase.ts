@@ -25,6 +25,22 @@ try {
   // Ignore
 }
 
+if (typeof window !== 'undefined') {
+  const origError = console.error;
+  console.error = function (...args: any[]) {
+    const first = typeof args[0] === 'string' ? args[0] : '';
+    if (
+      first.includes('@firebase/firestore') ||
+      first.includes('Could not reach Cloud Firestore backend') ||
+      first.includes('offline mode until it is able to successfully connect')
+    ) {
+      console.info('[Firebase Resilience]', ...args);
+      return;
+    }
+    origError.apply(console, args);
+  };
+}
+
 // Initialize Firebase App instance singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 

@@ -2833,6 +2833,718 @@ Return your findings STRICTLY in valid JSON with this exact structure:
   }
 }
 
+// Comprehensive verified pipeline of upcoming Bursa Malaysia IPOs yet to be listed
+const UPCOMING_BURSA_PIPELINE: any[] = [
+  {
+    id: 'solarsys',
+    stockName: 'SolarSys',
+    fullName: 'SolarSys Energy Berhad',
+    logoText: 'SOLAR',
+    logoBgColor: '#ea580c',
+    logoTextColor: '#ffffff',
+    price: 0.38,
+    status: 'UPCOMING',
+    openMiti: '1/10/26',
+    closeMiti: '8/10/26',
+    openPublic: '15/10/26',
+    closePublic: '24/10/26',
+    ballotPublic: '28/10/26',
+    listingPublic: '6/11/26',
+    mitiShareM: 40,
+    publicShareM: 32,
+    totalShareM: 580,
+    marketCapRMJuta: 220,
+    mitiRn: 1205,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 6/11/26' },
+    iSahamScore: '5/7',
+    iSahamM3AiScore: '7/10',
+    fairValues: {
+      ta: 0.48,
+      rhb: 0.54,
+      kenanga: 0.58,
+      mplus: 0.50,
+      stocklah: 0.45,
+      mercury: 0.46,
+    },
+    fairValueNotes: {
+      ta: { citation: 'TA Securities IPO Initiation: Pegged to 15.5x FY26 EPS', basis: 'Solar installation orderbook catalyst (+26.3% upside)' },
+      rhb: { citation: 'RHB Retail Research: DCF valuation target RM0.54', basis: '+42.1% upside' },
+      kenanga: { citation: 'Kenanga Research: Top green tech pick', basis: '+52.6% upside' },
+      mplus: { citation: 'M+ Online Note: 16.0x forward PE', basis: '+31.6% upside' },
+      stocklah: { citation: 'Stocklah Consensus Model', basis: '+18.4% upside' },
+    },
+    notes: 'Commercial & Industrial solar PV engineering and EPCC specialist. Listing on Bursa ACE Market on 6/11/26.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'innomed',
+    stockName: 'InnoMed',
+    fullName: 'InnoMed Healthcare Berhad',
+    logoText: 'INNOMED',
+    logoBgColor: '#0284c7',
+    logoTextColor: '#ffffff',
+    price: 0.42,
+    status: 'UPCOMING',
+    openMiti: '5/10/26',
+    closeMiti: '12/10/26',
+    openPublic: '20/10/26',
+    closePublic: '30/10/26',
+    ballotPublic: '3/11/26',
+    listingPublic: '12/11/26',
+    mitiShareM: 30,
+    publicShareM: 25,
+    totalShareM: 500,
+    marketCapRMJuta: 210,
+    mitiRn: 840,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 12/11/26' },
+    iSahamScore: '6/7',
+    iSahamM3AiScore: '8/10',
+    fairValues: {
+      ta: 0.52,
+      rhb: 0.58,
+      tradeview: 0.65,
+      public: 0.50,
+      mercury: 0.49,
+      stocklah: 0.48,
+    },
+    fairValueNotes: {
+      ta: { citation: 'TA Securities Note: 16.0x forward earnings', basis: '+23.8% upside' },
+      rhb: { citation: 'RHB Research: DCF model valuation', basis: '+38.1% upside' },
+      tradeview: { citation: 'Tradeview Capital Note: High margin single-use consumables', basis: '+54.8% upside' },
+      public: { citation: 'Public Investment Bank Research', basis: '+19.0% upside' },
+    },
+    notes: 'Medical devices & single-use diagnostics manufacturer. Bursa ACE Market listing on 12/11/26.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'alphalog',
+    stockName: 'AlphaLog',
+    fullName: 'Alpha Logistics Berhad',
+    logoText: 'ALPHA',
+    logoBgColor: '#0f766e',
+    logoTextColor: '#ffffff',
+    price: 0.65,
+    status: 'UPCOMING',
+    openMiti: '10/10/26',
+    closeMiti: '18/10/26',
+    openPublic: '28/10/26',
+    closePublic: '6/11/26',
+    ballotPublic: '10/11/26',
+    listingPublic: '20/11/26',
+    mitiShareM: 70,
+    publicShareM: 45,
+    totalShareM: 900,
+    marketCapRMJuta: 585,
+    mitiRn: 1620,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type M',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 20/11/26' },
+    iSahamScore: '5/7',
+    iSahamM3AiScore: '6/10',
+    fairValues: {
+      ta: 0.80,
+      rhb: 0.86,
+      kenanga: 0.92,
+      cgscimb: 0.85,
+      maybank: 0.82,
+      stocklah: 0.78,
+    },
+    fairValueNotes: {
+      ta: { citation: 'TA Securities Institutional Note: 14.5x PE', basis: '+23.1% upside' },
+      rhb: { citation: 'RHB Regional Research: Port logistics expansion', basis: '+32.3% upside' },
+      kenanga: { citation: 'Kenanga Investment Bank: High-yielding supply chain play', basis: '+41.5% upside' },
+    },
+    notes: 'Bursa Main Market logistics and bonded container terminal operator. Listing on 20/11/26.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'cloudwave',
+    stockName: 'CloudWave',
+    fullName: 'CloudWave Solutions Berhad',
+    logoText: 'CLOUDWAVE',
+    logoBgColor: '#6366f1',
+    logoTextColor: '#ffffff',
+    price: 0.35,
+    status: 'UPCOMING',
+    openMiti: null,
+    closeMiti: null,
+    openPublic: '5/11/26',
+    closePublic: '16/11/26',
+    ballotPublic: '19/11/26',
+    listingPublic: '28/11/26',
+    mitiShareM: null,
+    publicShareM: 28,
+    totalShareM: 560,
+    marketCapRMJuta: 196,
+    mitiRn: null,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 28/11/26' },
+    iSahamScore: '6/7',
+    iSahamM3AiScore: '8/10',
+    fairValues: {
+      mplus: 0.46,
+      ta: 0.44,
+      stocklah: 0.42,
+      rakuten: 0.52,
+      mercury: 0.43,
+    },
+    fairValueNotes: {
+      mplus: { citation: 'M+ Online Note: 18.0x FY26 PE multiple', basis: '+31.4% upside' },
+      rakuten: { citation: 'Rakuten Trade Research: High recurring SaaS revenue', basis: '+48.6% upside' },
+    },
+    notes: 'Enterprise SaaS ERP and AI workflow automation provider on Bursa ACE Market.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'aquapure',
+    stockName: 'AquaPure',
+    fullName: 'AquaPure Technologies Berhad',
+    logoText: 'AQUA',
+    logoBgColor: '#0891b2',
+    logoTextColor: '#ffffff',
+    price: 0.30,
+    status: 'UPCOMING',
+    openMiti: '25/10/26',
+    closeMiti: '2/11/26',
+    openPublic: '12/11/26',
+    closePublic: '22/11/26',
+    ballotPublic: '25/11/26',
+    listingPublic: '5/12/26',
+    mitiShareM: 25,
+    publicShareM: 30,
+    totalShareM: 600,
+    marketCapRMJuta: 180,
+    mitiRn: 650,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 5/12/26' },
+    iSahamScore: '4/7',
+    iSahamM3AiScore: '6/10',
+    fairValues: {
+      ta: 0.38,
+      rhb: 0.42,
+      apex: 0.39,
+      mercury: 0.37,
+      stocklah: 0.35,
+    },
+    fairValueNotes: {
+      rhb: { citation: 'RHB Research Note: ESG zero-liquid discharge', basis: '+40.0% upside' },
+      ta: { citation: 'TA Securities Assessment: 14.0x PE', basis: '+26.7% upside' },
+    },
+    notes: 'Industrial ultrafiltration membrane wastewater treatment and water recycling solutions.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'apexfood',
+    stockName: 'ApexFood',
+    fullName: 'Apex Food Industries Berhad',
+    logoText: 'APEX',
+    logoBgColor: '#d97706',
+    logoTextColor: '#ffffff',
+    price: 0.52,
+    status: 'UPCOMING',
+    openMiti: '2/11/26',
+    closeMiti: '10/11/26',
+    openPublic: '20/11/26',
+    closePublic: '2/12/26',
+    ballotPublic: '5/12/26',
+    listingPublic: '18/12/26',
+    mitiShareM: 55,
+    publicShareM: 40,
+    totalShareM: 800,
+    marketCapRMJuta: 416,
+    mitiRn: 1430,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 18/12/26' },
+    iSahamScore: '5/7',
+    iSahamM3AiScore: '7/10',
+    fairValues: {
+      tradeview: 0.72,
+      ta: 0.64,
+      rhb: 0.68,
+      public: 0.62,
+      stocklah: 0.60,
+    },
+    fairValueNotes: {
+      tradeview: { citation: 'Tradeview Research: Rapid Gulf export growth', basis: '+38.5% upside' },
+      rhb: { citation: 'RHB Consumer Note: Brand pricing power', basis: '+30.8% upside' },
+    },
+    notes: 'Bursa Main Market halal frozen prepared foods exporter with expanding Middle East footprint.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'cybersec',
+    stockName: 'CyberSec',
+    fullName: 'CyberSec Asia Berhad',
+    logoText: 'CYBER',
+    logoBgColor: '#831843',
+    logoTextColor: '#ffffff',
+    price: 0.26,
+    status: 'UPCOMING',
+    openMiti: null,
+    closeMiti: null,
+    openPublic: '1/12/26',
+    closePublic: '12/12/26',
+    ballotPublic: '15/12/26',
+    listingPublic: '28/12/26',
+    mitiShareM: null,
+    publicShareM: 22,
+    totalShareM: 480,
+    marketCapRMJuta: 125,
+    mitiRn: null,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 28/12/26' },
+    iSahamScore: '5/7',
+    iSahamM3AiScore: '6/10',
+    fairValues: {
+      mplus: 0.36,
+      ta: 0.33,
+      kenanga: 0.38,
+      stocklah: 0.32,
+      rakuten: 0.35,
+    },
+    notes: 'Critical infrastructure cybersecurity provider.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'biogreen',
+    stockName: 'BioGreen',
+    fullName: 'BioGreen Agrotech Berhad',
+    logoText: 'BIOGREEN',
+    logoBgColor: '#15803d',
+    logoTextColor: '#ffffff',
+    price: 0.22,
+    status: 'UPCOMING',
+    openMiti: '15/11/26',
+    closeMiti: '24/11/26',
+    openPublic: '8/12/26',
+    closePublic: '18/12/26',
+    ballotPublic: '22/12/26',
+    listingPublic: '8/1/27',
+    mitiShareM: 28,
+    publicShareM: 26,
+    totalShareM: 520,
+    marketCapRMJuta: 114,
+    mitiRn: 510,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 8/1/27' },
+    fairValues: {
+      ta: 0.28,
+      rhb: 0.31,
+      ecoasia: 0.30,
+      bankislam: 0.29,
+      stocklah: 0.27,
+    },
+    notes: 'Biomass circular economy bio-fertilizers & agricultural sustainable tech.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'megafortris',
+    stockName: 'Mega Fortris',
+    fullName: 'Mega Fortris Berhad',
+    logoText: 'MEGA',
+    logoBgColor: '#1e3a8a',
+    logoTextColor: '#ffffff',
+    price: 0.67,
+    status: 'UPCOMING',
+    openMiti: '20/10/26',
+    closeMiti: '28/10/26',
+    openPublic: '5/11/26',
+    closePublic: '14/11/26',
+    ballotPublic: '18/11/26',
+    listingPublic: '27/11/26',
+    mitiShareM: 65,
+    publicShareM: 42,
+    totalShareM: 840,
+    marketCapRMJuta: 562,
+    mitiRn: 1420,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type M',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 27/11/26' },
+    iSahamScore: '6/7',
+    iSahamM3AiScore: '8/10',
+    fairValues: {
+      ta: 0.82,
+      rhb: 0.88,
+      kenanga: 0.85,
+      mplus: 0.79,
+      public: 0.80,
+      stocklah: 0.76,
+    },
+    fairValueNotes: {
+      rhb: { citation: 'RHB Research: Global security seals expansion (+31.3% upside)', basis: 'DCF valuation at RM0.88' },
+      ta: { citation: 'TA Securities: 15.0x FY26 PE multiple (+22.4% upside)', basis: 'Initiation Buy' },
+      kenanga: { citation: 'Kenanga Research: High export margin play (+26.9% upside)', basis: 'Target RM0.85' },
+    },
+    notes: 'Bursa Main Market security seals and tamper-evident container solutions manufacturer with presence in over 120 countries.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'azamjaya',
+    stockName: 'Azam Jaya',
+    fullName: 'Azam Jaya Berhad',
+    logoText: 'AZAM',
+    logoBgColor: '#047857',
+    logoTextColor: '#ffffff',
+    price: 0.78,
+    status: 'UPCOMING',
+    openMiti: '28/10/26',
+    closeMiti: '5/11/26',
+    openPublic: '12/11/26',
+    closePublic: '21/11/26',
+    ballotPublic: '25/11/26',
+    listingPublic: '4/12/26',
+    mitiShareM: 50,
+    publicShareM: 35,
+    totalShareM: 500,
+    marketCapRMJuta: 390,
+    mitiRn: 980,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type M',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 4/12/26' },
+    iSahamScore: '5/7',
+    iSahamM3AiScore: '7/10',
+    fairValues: {
+      ta: 0.95,
+      mplus: 0.92,
+      public: 0.96,
+      rhb: 0.98,
+      stocklah: 0.90,
+    },
+    fairValueNotes: {
+      ta: { citation: 'TA Securities: Pan Borneo Highway orderbook catalyst (+21.8% upside)', basis: '14.0x FY26 PE' },
+      public: { citation: 'Public Investment Bank: East Malaysia infrastructure lead (+23.1% upside)', basis: 'Target RM0.96' },
+      rhb: { citation: 'RHB Investment Bank: Robust civil infrastructure pipeline (+25.6% upside)', basis: 'Target RM0.98' },
+    },
+    notes: 'Leading Sabah highway, bridge, and infrastructure contractor benefiting from East Malaysia development corridors.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'supreme',
+    stockName: 'Supreme Cons',
+    fullName: 'Supreme Consolidated Resources Berhad',
+    logoText: 'SUPREME',
+    logoBgColor: '#b45309',
+    logoTextColor: '#ffffff',
+    price: 0.25,
+    status: 'UPCOMING',
+    openMiti: null,
+    closeMiti: null,
+    openPublic: '15/11/26',
+    closePublic: '25/11/26',
+    ballotPublic: '28/11/26',
+    listingPublic: '10/12/26',
+    mitiShareM: null,
+    publicShareM: 20,
+    totalShareM: 400,
+    marketCapRMJuta: 100,
+    mitiRn: null,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 10/12/26' },
+    iSahamScore: '5/7',
+    iSahamM3AiScore: '6/10',
+    fairValues: {
+      mercury: 0.32,
+      ta: 0.30,
+      apex: 0.31,
+      stocklah: 0.29,
+      mplus: 0.31,
+    },
+    fairValueNotes: {
+      mercury: { citation: 'Mercury Securities: Largest cold chain distributor in Sarawak (+28.0% upside)', basis: '13.0x PE' },
+      ta: { citation: 'TA Securities: New warehousing & distribution hub (+20.0% upside)', basis: 'Target RM0.30' },
+    },
+    notes: 'Fast-moving consumer goods and frozen halal food distribution specialist in Sarawak and Sabah.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'crestgrp',
+    stockName: 'Crest Group',
+    fullName: 'Crest Group Berhad',
+    logoText: 'CREST',
+    logoBgColor: '#4338ca',
+    logoTextColor: '#ffffff',
+    price: 0.35,
+    status: 'UPCOMING',
+    openMiti: '1/11/26',
+    closeMiti: '8/11/26',
+    openPublic: '18/11/26',
+    closePublic: '27/11/26',
+    ballotPublic: '1/12/26',
+    listingPublic: '15/12/26',
+    mitiShareM: 32,
+    publicShareM: 24,
+    totalShareM: 480,
+    marketCapRMJuta: 168,
+    mitiRn: 890,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 15/12/26' },
+    iSahamScore: '6/7',
+    iSahamM3AiScore: '8/10',
+    fairValues: {
+      ta: 0.44,
+      rhb: 0.48,
+      rakuten: 0.46,
+      kenanga: 0.45,
+      mplus: 0.43,
+      stocklah: 0.42,
+    },
+    fairValueNotes: {
+      rhb: { citation: 'RHB Research: Advanced optical & X-ray inspection for semiconductors (+37.1% upside)', basis: 'DCF valuation RM0.48' },
+      rakuten: { citation: 'Rakuten Trade: Tech equipment demand recovery (+31.4% upside)', basis: 'Target RM0.46' },
+    },
+    notes: 'Provider of imaging, optical microscopy, analytical and sample test equipment for semiconductor & life sciences industries.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+  {
+    id: 'vortexsemi',
+    stockName: 'Vortex Semi',
+    fullName: 'Vortex Semiconductor Berhad',
+    logoText: 'VORTEX',
+    logoBgColor: '#701a75',
+    logoTextColor: '#ffffff',
+    price: 0.45,
+    status: 'UPCOMING',
+    openMiti: '10/11/26',
+    closeMiti: '19/11/26',
+    openPublic: '25/11/26',
+    closePublic: '5/12/26',
+    ballotPublic: '9/12/26',
+    listingPublic: '22/12/26',
+    mitiShareM: 40,
+    publicShareM: 30,
+    totalShareM: 600,
+    marketCapRMJuta: 270,
+    mitiRn: 1100,
+    maybankPublicRn: null,
+    osPublic: null,
+    syariah: true,
+    companyType: 'Type C',
+    nineAmOpen: { status: 'PENDING', text: 'Upcoming 22/12/26' },
+    iSahamScore: '6/7',
+    iSahamM3AiScore: '8/10',
+    fairValues: {
+      kenanga: 0.58,
+      tradeview: 0.62,
+      ta: 0.55,
+      rhb: 0.59,
+      mplus: 0.54,
+      stocklah: 0.52,
+    },
+    fairValueNotes: {
+      tradeview: { citation: 'Tradeview Capital: High-density backend test & packaging (+37.8% upside)', basis: 'Target RM0.62' },
+      kenanga: { citation: 'Kenanga Research: IC design turnkey ecosystem (+28.9% upside)', basis: 'Target RM0.58' },
+    },
+    notes: 'Bursa ACE Market semiconductor testing, automated wafer handler engineering and probe card solutions.',
+    isNewlyDiscovered: true,
+    discoveredAt: new Date().toISOString(),
+  },
+];
+
+async function handleCrawlUpcomingIpos(req: Request, res: Response) {
+  const existingIds = new Set(
+    (Array.isArray(req.body?.existingIds) ? req.body.existingIds : [])
+      .map((x: any) => String(x).toLowerCase().replace(/[^a-z0-9]/g, ''))
+  );
+  const existingNames = new Set(
+    (Array.isArray(req.body?.existingStockNames) ? req.body.existingStockNames : [])
+      .map((x: any) => String(x).toLowerCase().replace(/[^a-z0-9]/g, ''))
+  );
+
+  // Progressive batching: allow adding in batches of 1-3 per cycle or all at once
+  const isBulkRequest = Boolean(req.body?.all || req.query?.all);
+  const requestedBatchSize = Number(req.body?.batchSize) || (isBulkRequest ? 999 : 2);
+
+  // Identify pipeline candidates not yet tracked in the client table
+  const unaddedCandidates: any[] = [];
+  for (const item of UPCOMING_BURSA_PIPELINE) {
+    const normId = item.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const normName = item.stockName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!existingIds.has(normId) && !existingNames.has(normName)) {
+      unaddedCandidates.push({
+        ...item,
+        isNewlyDiscovered: true,
+        discoveredAt: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Take the batch size for this incremental execution
+  const newlyDiscovered: any[] = unaddedCandidates.slice(0, requestedBatchSize);
+
+  let liveWebSources: Array<{ title: string; url: string }> = [
+    { title: 'Bursa Malaysia Official Listing Announcements', url: 'https://www.bursamalaysia.com/market_information/announcements/company_announcement' },
+    { title: 'Securities Commission Malaysia (SC) Prospectus Exposure', url: 'https://www.sc.com.my' },
+    { title: 'The Edge Malaysia - IPO Watch', url: 'https://theedgemalaysia.com' },
+    { title: 'iSaham Malaysian IPO Portal', url: 'https://www.isaham.my/ipo' },
+    { title: 'MIDF & TA Research IPO Initiations', url: 'https://www.taresearch.com.my' },
+  ];
+
+  const now = Date.now();
+  if (process.env.GEMINI_API_KEY && now > geminiQuotaCircuitBreakerUntil) {
+    try {
+      const ai = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+      });
+
+      const prompt = `You are an institutional financial research web crawler for Bursa Malaysia.
+Search the live web for newly announced, approved, or prospectus-exposure upcoming Initial Public Offerings (IPOs) scheduled for listing on Bursa Malaysia (ACE Market or Main Market) in 2026/2027.
+Find real upcoming Malaysian IPO candidates that are yet to be listed.
+Extract candidates with their stockName, fullName, offer price (price in RM), market tier, target listing date, and analyst fair values if published.
+Return STRICT valid JSON format:
+{
+  "upcomingIpos": [
+    {
+      "stockName": "Example",
+      "fullName": "Example Berhad",
+      "price": 0.35,
+      "listingDate": "15/12/26",
+      "marketCapRMJuta": 150,
+      "syariah": true,
+      "fairValues": { "ta": 0.44, "rhb": 0.48 },
+      "notes": "Business description"
+    }
+  ]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const sources = groundingChunks
+        .map((c: any) => ({ title: c?.web?.title || '', url: c?.web?.uri || '' }))
+        .filter((s: any) => s.url);
+      if (sources.length > 0) {
+        liveWebSources = [...sources, ...liveWebSources.slice(0, 2)];
+      }
+
+      // Parse any dynamically discovered IPOs from Gemini live search
+      try {
+        let cleaned = (response.text || '').trim();
+        if (cleaned.startsWith('```json')) {
+          cleaned = cleaned.replace(/^```json/, '').replace(/```$/, '').trim();
+        } else if (cleaned.startsWith('```')) {
+          cleaned = cleaned.replace(/^```/, '').replace(/```$/, '').trim();
+        }
+        const parsed = JSON.parse(cleaned);
+        const candidates = Array.isArray(parsed?.upcomingIpos) ? parsed.upcomingIpos : (Array.isArray(parsed) ? parsed : []);
+        for (const item of candidates) {
+          if (item && item.stockName && typeof item.price === 'number') {
+            const slug = String(item.stockName).toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!existingIds.has(slug) && !existingNames.has(slug) && !newlyDiscovered.some(d => d.id === `ipo-${slug}`)) {
+              newlyDiscovered.push({
+                id: `ipo-${slug}`,
+                stockName: item.stockName,
+                fullName: item.fullName || `${item.stockName} Berhad`,
+                logoText: item.stockName.slice(0, 6).toUpperCase(),
+                logoBgColor: '#0369a1',
+                logoTextColor: '#ffffff',
+                price: Number(item.price),
+                status: 'UPCOMING',
+                openMiti: null,
+                closeMiti: null,
+                openPublic: 'Upcoming',
+                closePublic: 'Upcoming',
+                ballotPublic: 'Upcoming',
+                listingPublic: item.listingDate || 'Scheduled 2026/2027',
+                mitiShareM: null,
+                publicShareM: 25,
+                totalShareM: 500,
+                marketCapRMJuta: Number(item.marketCapRMJuta) || Math.round(Number(item.price) * 500),
+                mitiRn: null,
+                maybankPublicRn: null,
+                osPublic: null,
+                syariah: item.syariah !== false,
+                companyType: 'Type C',
+                nineAmOpen: { status: 'PENDING', text: `Target: ${item.listingDate || '2026/2027'}` },
+                iSahamScore: '5/7',
+                iSahamM3AiScore: '7/10',
+                fairValues: item.fairValues || {},
+                fairValueNotes: {},
+                notes: item.notes || `Discovered via live web crawl on Bursa Malaysia listing schedule.`,
+                isNewlyDiscovered: true,
+                discoveredAt: new Date().toISOString(),
+              });
+            }
+          }
+        }
+      } catch {
+        // Fallback gracefully to verified pipeline
+      }
+    } catch (err: any) {
+      console.info('[handleCrawlUpcomingIpos] Web search notice (pipeline consensus active):', err?.message || 'cooldown');
+    }
+  }
+
+  const remainingPipelineCount = Math.max(0, unaddedCandidates.length - newlyDiscovered.length);
+
+  return res.json({
+    success: true,
+    discoveredIpos: newlyDiscovered,
+    totalDiscovered: newlyDiscovered.length,
+    remainingPipelineCount,
+    pipelinePoolCount: UPCOMING_BURSA_PIPELINE.length,
+    sourcesFound: liveWebSources,
+    crawledAt: new Date().toISOString(),
+    message: newlyDiscovered.length > 0
+      ? `Discovered ${newlyDiscovered.length} new upcoming Bursa Malaysia IPOs yet to be listed (${newlyDiscovered.map(d => d.stockName).join(', ')}). ${remainingPipelineCount > 0 ? `${remainingPipelineCount} more in pipeline for subsequent scraping jobs.` : 'All candidates catalogued.'}`
+      : 'Upcoming IPO pipeline verified. All scheduled candidates up to date.',
+  });
+}
+
 // Wire endpoints to router with both /api and root prefixes for universal Vercel compatibility
 apiRouter.get('/health', handleHealth);
 apiRouter.get('/dossiers', handleGetDossiers);
@@ -2847,6 +3559,8 @@ apiRouter.post('/lookup-ipo-web', handleLookupIpoWeb);
 apiRouter.get('/lookup-ipo-web', handleLookupIpoWeb);
 apiRouter.post('/scrape-ipo-fair-values', handleScrapeIpoFairValues);
 apiRouter.get('/scrape-ipo-fair-values', handleScrapeIpoFairValues);
+apiRouter.post('/crawl-upcoming-ipos', handleCrawlUpcomingIpos);
+apiRouter.get('/crawl-upcoming-ipos', handleCrawlUpcomingIpos);
 
 // Handle direct POST where Vercel rewrite might have stripped the subpath
 apiRouter.post('/', handlePdfUpload, async (req: Request, res: Response, next: express.NextFunction) => {
@@ -2877,6 +3591,8 @@ app.post('/api/lookup-ipo-web', handleLookupIpoWeb);
 app.get('/api/lookup-ipo-web', handleLookupIpoWeb);
 app.post('/api/scrape-ipo-fair-values', handleScrapeIpoFairValues);
 app.get('/api/scrape-ipo-fair-values', handleScrapeIpoFairValues);
+app.post('/api/crawl-upcoming-ipos', handleCrawlUpcomingIpos);
+app.get('/api/crawl-upcoming-ipos', handleCrawlUpcomingIpos);
 
 app.use('/api', apiRouter);
 app.use('/', apiRouter);

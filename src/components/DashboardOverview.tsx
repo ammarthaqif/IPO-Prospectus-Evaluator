@@ -27,6 +27,7 @@ import { ProspectusRadarComparison } from './ProspectusRadarComparison';
 import { IpoPricingAndShariahStrip } from './IpoPricingAndShariahStrip';
 import { ExpertAnalystConsensusCard } from './ExpertAnalystConsensusCard';
 import { MarketSentimentTimelineChart } from './MarketSentimentTimelineChart';
+import { IpoSectorHeatmap } from './IpoSectorHeatmap';
 
 interface DashboardOverviewProps {
   dossier: ProspectusDossier;
@@ -146,6 +147,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             >
               <Table2 className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span>Bursa IPO Master Tracker</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('sector-heatmap-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-500/30 hover:border-indigo-500/50 text-xs font-semibold text-indigo-300 hover:text-white transition-all cursor-pointer shadow-sm group"
+              title="Jump to Interactive D3 Sector Heatmap & Pipeline Valuation Trends"
+            >
+              <PieChart className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>Sector Heatmap</span>
             </button>
 
             {availableDossiers.length > 1 && (
@@ -603,6 +617,24 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         onOpenUpdateListingModal={onOpenUpdateListingModal || (() => {})}
         onOpenFullAnalystModal={onOpenAnalystModal || (() => {})}
       />
+
+      {/* Interactive Industry Sector Heatmap & Pipeline Valuation Trends */}
+      <div id="sector-heatmap-section" className="scroll-mt-6">
+        <IpoSectorHeatmap
+          onSelectIpo={(ipo) => {
+            const matched = availableDossiers.find(d => 
+              d.companyName.toLowerCase().includes(ipo.stockName.toLowerCase()) ||
+              ipo.stockName.toLowerCase().includes(d.companyName.toLowerCase().split(' ')[0])
+            );
+            if (matched && onSelectDossier) {
+              onSelectDossier(matched);
+            }
+          }}
+          onNavigateToTracker={(stockName) => {
+            onNavigateTab('ipo-tracker');
+          }}
+        />
+      </div>
 
       {/* Side-by-Side Prospectus Comparison & Radar Benchmark Section */}
       <div id="radar-comparison-section" className="scroll-mt-6">

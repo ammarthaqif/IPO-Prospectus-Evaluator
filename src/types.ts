@@ -410,6 +410,8 @@ export interface TrackedIpoItem {
   // Classification
   syariah: boolean;
   companyType: string;
+  sector?: string;
+  peMultiple?: number;
   
   // Debut Open (9 am debut)
   nineAmOpen?: {
@@ -440,5 +442,26 @@ export interface TrackedIpoItem {
   lastCrawledAt?: string;
   sourceUrl?: string;
   notes?: string;
+  isNewlyDiscovered?: boolean;
+  discoveredAt?: string;
+}
+
+export interface AutoCrawlScheduleConfig {
+  enabled: boolean;
+  intervalMinutes: number; // e.g. 3, 5, 10, 15, 30, 60
+  lastRunAt?: string;
+  nextRunAt?: string;
+}
+
+export interface AutoCrawlLogEntry {
+  id: string;
+  timestamp: string;
+  triggerType: 'AUTOMATIC' | 'MANUAL';
+  status: 'SUCCESS' | 'WARNING' | 'FAILED';
+  summary: string;
+  newIposDiscoveredCount: number;
+  newFairValuesExtractedCount: number;
+  discoveredIpoNames?: string[];
+  sourcesCount: number;
 }
 

@@ -25,9 +25,15 @@ import {
   BarChart3, 
   Eye, 
   FileText,
-  RotateCcw
+  RotateCcw,
+  Zap,
+  Play,
+  Pause,
+  History,
+  ListPlus,
+  Radio
 } from 'lucide-react';
-import { TrackedIpoItem, ResearchHouseMeta } from '../types';
+import { TrackedIpoItem, ResearchHouseMeta, AutoCrawlScheduleConfig, AutoCrawlLogEntry } from '../types';
 import { DEFAULT_TRACKED_IPOS, RESEARCH_HOUSES } from '../data/defaultTrackedIpos';
 import { 
   loadStoredTrackedIpos, 
@@ -35,7 +41,16 @@ import {
   resetTrackedIposToDefault, 
   calculateIpoConsensus 
 } from '../services/ipoStorage';
-import { crawlSingleIpoFairValues, crawlMultipleIpos } from '../services/ipoScraperService';
+import { 
+  crawlSingleIpoFairValues, 
+  crawlMultipleIpos,
+  crawlUpcomingIpos,
+  executeComprehensiveScrapingJob,
+  getStoredAutoCrawlConfig,
+  saveStoredAutoCrawlConfig,
+  getStoredAutoCrawlLogs,
+  clearAutoCrawlLogs
+} from '../services/ipoScraperService';
 import { saveTrackedIpoToCloud, saveAllTrackedIposToCloud, subscribeToTrackedIpos } from '../services/firebase';
 
 interface IpoTrackerTableModuleProps {
@@ -65,6 +80,14 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
   const [isAddIpoModalOpen, setIsAddIpoModalOpen] = useState<boolean>(false);
   const [editingCell, setEditingCell] = useState<{ ipoId: string; houseKey: string; currentVal?: number } | null>(null);
   const [editValueInput, setEditValueInput] = useState<string>('');
+
+  // Auto-crawler & Scheduled Background Scraping State
+  const [autoConfig, setAutoConfig] = useState<AutoCrawlScheduleConfig>(() => getStoredAutoCrawlConfig());
+  const [secondsUntilNextCrawl, setSecondsUntilNextCrawl] = useState<number>(() => (getStoredAutoCrawlConfig().intervalMinutes || 3) * 60);
+  const [isAutoCrawling, setIsAutoCrawling] = useState<boolean>(false);
+  const [autoCrawlLogs, setAutoCrawlLogs] = useState<AutoCrawlLogEntry[]>(() => getStoredAutoCrawlLogs());
+  const [isAutoCrawlSettingsOpen, setIsAutoCrawlSettingsOpen] = useState<boolean>(false);
+  const [autoCrawlToast, setAutoCrawlToast] = useState<{ text: string; time: string; type: 'success' | 'info' } | null>(null);
 
   // Form state for adding new IPO candidate
   const [newStockName, setNewStockName] = useState<string>('');
@@ -207,6 +230,105 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
     } finally {
       setIsCrawling(false);
     }
+  };
+
+  // Automated Background Crawler Scheduler Effect
+  useEffect(() => {
+    if (!autoConfig.enabled) return;
+
+    const intervalId = setInterval(() => {
+      setSecondsUntilNextCrawl((prev) => {
+        if (prev <= 1) {
+          // Time to automatically execute next scraping job
+          triggerContinuousScraping('AUTOMATIC', { batchSize: 2 });
+          return (autoConfig.intervalMinutes || 3) * 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [autoConfig.enabled, autoConfig.intervalMinutes, ipos]);
+
+  // Executes comprehensive scraping job (both upcoming discovery & broker target extraction)
+  const triggerContinuousScraping = async (
+    triggerType: 'AUTOMATIC' | 'MANUAL', 
+    options?: { batchSize?: number; all?: boolean }
+  ) => {
+    if (isAutoCrawling || isCrawling) return;
+    setIsAutoCrawling(true);
+
+    try {
+      const res = await executeComprehensiveScrapingJob(ipos, triggerType, undefined, options);
+      if (res && res.updatedList) {
+        setIpos(res.updatedList);
+        saveAllTrackedIposToCloud(res.updatedList);
+        setAutoCrawlLogs(getStoredAutoCrawlLogs());
+
+        const updatedConfig: AutoCrawlScheduleConfig = {
+          ...autoConfig,
+          lastRunAt: new Date().toISOString(),
+          nextRunAt: new Date(Date.now() + (autoConfig.intervalMinutes || 3) * 60000).toISOString(),
+        };
+        setAutoConfig(updatedConfig);
+        saveStoredAutoCrawlConfig(updatedConfig);
+
+        // Notify user with feedback toast
+        setAutoCrawlToast({
+          text: res.summary,
+          time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          type: 'success',
+        });
+        setTimeout(() => setAutoCrawlToast(null), 8000);
+      }
+    } catch (err: any) {
+      console.info('[ContinuousScraper notice]:', err?.message || 'Done');
+    } finally {
+      setIsAutoCrawling(false);
+    }
+  };
+
+  // Immediate manual trigger for the next scheduled scraping job
+  const handleTriggerScrapingNow = () => {
+    setSecondsUntilNextCrawl((autoConfig.intervalMinutes || 3) * 60);
+    triggerContinuousScraping('MANUAL', { batchSize: 2 });
+  };
+
+  // Specifically discover and continuously append upcoming IPOs
+  const handleDiscoverUpcomingPipeline = () => {
+    triggerContinuousScraping('MANUAL', { batchSize: 2 });
+  };
+
+  // Toggle auto-crawl enabled / paused
+  const handleToggleAutoCrawl = () => {
+    const updated = {
+      ...autoConfig,
+      enabled: !autoConfig.enabled,
+    };
+    setAutoConfig(updated);
+    saveStoredAutoCrawlConfig(updated);
+    if (updated.enabled) {
+      setSecondsUntilNextCrawl((updated.intervalMinutes || 3) * 60);
+    }
+  };
+
+  // Change interval minutes
+  const handleSetIntervalMinutes = (minutes: number) => {
+    const updated = {
+      ...autoConfig,
+      intervalMinutes: minutes,
+      nextRunAt: new Date(Date.now() + minutes * 60000).toISOString(),
+    };
+    setAutoConfig(updated);
+    saveStoredAutoCrawlConfig(updated);
+    setSecondsUntilNextCrawl(minutes * 60);
+  };
+
+  // Helper to format countdown MM:SS
+  const formatCountdown = (totalSec: number) => {
+    const m = Math.floor(Math.max(0, totalSec) / 60);
+    const s = Math.max(0, totalSec) % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
   // Save edited cell fair value
@@ -384,13 +506,37 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
           {/* Action Buttons: Web Crawler, Add IPO, Export */}
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={handleCrawlAll}
-              disabled={isCrawling}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 border border-emerald-400/30 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-              title="Crawl the web with Google Search grounding to discover newly released research house reports and broker fair values"
+              onClick={handleTriggerScrapingNow}
+              disabled={isAutoCrawling || isCrawling}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 border border-emerald-400/40 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              title="Automatically executes scraping job: crawls live web for new upcoming IPOs & extracts research house fair values"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isCrawling ? 'animate-spin' : ''}`} />
-              <span>{isCrawling ? 'Crawling Web...' : 'Scrape & Crawl Web Fair Values'}</span>
+              <Zap className={`w-3.5 h-3.5 text-amber-300 ${isAutoCrawling ? 'animate-bounce' : ''}`} />
+              <span>{isAutoCrawling ? 'Executing Scraping Job...' : 'Trigger Next Scraping Job Now'}</span>
+            </button>
+
+            <button
+              onClick={handleDiscoverUpcomingPipeline}
+              disabled={isAutoCrawling || isCrawling}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 transition-colors cursor-pointer disabled:opacity-50"
+              title="Discovers and appends newly scheduled upcoming Bursa Malaysia IPOs yet to be listed"
+            >
+              <ListPlus className="w-3.5 h-3.5 text-emerald-400" />
+              <span>+ Crawl Upcoming IPOs</span>
+            </button>
+
+            <button
+              onClick={() => setIsAutoCrawlSettingsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer"
+              title="View auto-crawler schedule intervals, live sources, and activity execution log"
+            >
+              <History className="w-3.5 h-3.5 text-sky-400" />
+              <span>Crawler Activity Log</span>
+              {autoCrawlLogs.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                  {autoCrawlLogs.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -419,6 +565,102 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Continuous Automatic Scraping Job Controller Banner */}
+        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                {autoConfig.enabled && !isAutoCrawling && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                )}
+                {isAutoCrawling && (
+                  <span className="animate-spin absolute inline-flex h-full w-full rounded-full border-2 border-amber-400 border-t-transparent" />
+                )}
+                <span className={`relative inline-flex rounded-full h-3 w-3 ${
+                  isAutoCrawling ? 'bg-amber-400' : (autoConfig.enabled ? 'bg-emerald-500' : 'bg-slate-600')
+                }`} />
+              </span>
+              <span className="font-bold text-white tracking-tight flex items-center gap-1.5">
+                <span>{isAutoCrawling ? 'Scraping Job Running...' : (autoConfig.enabled ? 'Continuous Auto-Crawler Active' : 'Auto-Crawler Paused')}</span>
+              </span>
+            </div>
+
+            {autoConfig.enabled && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/50 border border-emerald-500/30 text-emerald-300 font-mono text-[11px]">
+                <Clock className="w-3 h-3 text-emerald-400" />
+                <span>Next automated job in: <strong className="text-white font-bold">{formatCountdown(secondsUntilNextCrawl)}</strong></span>
+              </div>
+            )}
+
+            {!autoConfig.enabled && (
+              <span className="text-slate-400 text-[11px]">
+                Periodic scraping paused. Click Resume to re-enable automated jobs.
+              </span>
+            )}
+          </div>
+
+          {/* Quick Scheduler Interval & Control Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-[11px]">
+              <span className="px-2 text-slate-400 font-medium">Interval:</span>
+              {[1, 3, 5, 10, 15].map((mins) => (
+                <button
+                  key={mins}
+                  onClick={() => handleSetIntervalMinutes(mins)}
+                  className={`px-2 py-0.5 rounded font-mono transition-colors cursor-pointer ${
+                    autoConfig.intervalMinutes === mins
+                      ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={`Run scraping job automatically every ${mins} minute(s)`}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleToggleAutoCrawl}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
+                autoConfig.enabled
+                  ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-500/30'
+                  : 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border-emerald-500/40'
+              }`}
+            >
+              {autoConfig.enabled ? (
+                <>
+                  <Pause className="w-3 h-3 text-amber-400" />
+                  <span>Pause Timer</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3 text-emerald-400" />
+                  <span>Resume Auto-Run</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Result Notification Banner (Toast) */}
+        {autoCrawlToast && (
+          <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-950/80 via-teal-950/80 to-slate-950 border border-emerald-500/40 shadow-lg flex items-center justify-between gap-3 text-xs animate-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <div>
+                <span className="font-bold text-emerald-300">Scraping Job Completed ({autoCrawlToast.time}):</span>{' '}
+                <span className="text-slate-200">{autoCrawlToast.text}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setAutoCrawlToast(null)}
+              className="p-1 rounded text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Executive Stats Metric Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-800/80">
@@ -680,15 +922,22 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
                   </td>
                   {filteredIpos.map((ipo) => (
                     <td key={`name-${ipo.id}`} className="px-3 py-2 text-center font-semibold text-white border-r border-slate-800/60 whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1">
-                        <span>{ipo.stockName}</span>
-                        <button
-                          onClick={() => setSelectedIpoForDetail(ipo)}
-                          className="text-slate-500 hover:text-indigo-400"
-                          title="View detailed analyst breakdown"
-                        >
-                          <Eye className="w-3 h-3" />
-                        </button>
+                      <div className="flex flex-col items-center justify-center gap-0.5">
+                        <div className="flex items-center justify-center gap-1">
+                          <span>{ipo.stockName}</span>
+                          <button
+                            onClick={() => setSelectedIpoForDetail(ipo)}
+                            className="text-slate-500 hover:text-indigo-400"
+                            title="View detailed analyst breakdown"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </button>
+                        </div>
+                        {ipo.isNewlyDiscovered && (
+                          <span className="px-1.5 py-0.2 rounded text-[8px] font-mono font-bold bg-teal-500/20 text-teal-300 border border-teal-500/40 animate-pulse">
+                            NEW PIPELINE
+                          </span>
+                        )}
                       </div>
                     </td>
                   ))}
@@ -1732,6 +1981,270 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* AUTO-CRAWLER SETTINGS & ACTIVITY LOG MODAL */}
+      {isAutoCrawlSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-6">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                    <Zap className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Autonomous Bursa IPO Web Harvester</h3>
+                    <p className="text-xs text-slate-400">
+                      Continuously discovers upcoming IPOs yet to be listed and scrapes analyst fair value targets from research houses.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAutoCrawlSettingsOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scheduler Status & Interval Controls */}
+            <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-white flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-400" />
+                    <span>Automated Periodic Scraping Job</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    When active, the system automatically triggers scraping jobs from time to time to harvest newly announced IPOs and updated broker notes.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleToggleAutoCrawl}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      autoConfig.enabled
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/20'
+                        : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                    }`}
+                  >
+                    {autoConfig.enabled ? (
+                      <>
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        <span>Enabled (Active)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Paused</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Interval Selection Buttons */}
+              <div className="pt-2 border-t border-slate-800/80">
+                <div className="text-[11px] font-semibold text-slate-300 mb-2">
+                  Automatic Trigger Frequency (Interval):
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {[
+                    { label: 'Every 1 min', value: 1, desc: 'Aggressive' },
+                    { label: 'Every 2 mins', value: 2, desc: 'Fast' },
+                    { label: 'Every 3 mins', value: 3, desc: 'Recommended' },
+                    { label: 'Every 5 mins', value: 5, desc: 'Standard' },
+                    { label: 'Every 10 mins', value: 10, desc: 'Moderate' },
+                    { label: 'Every 15 mins', value: 15, desc: 'Conservative' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleSetIntervalMinutes(opt.value)}
+                      className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
+                        autoConfig.intervalMinutes === opt.value
+                          ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 shadow-sm'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white'
+                      }`}
+                    >
+                      <div className="text-xs font-bold font-mono">{opt.label}</div>
+                      <div className="text-[9px] text-slate-500">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status and Action Row */}
+              <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="text-[11px] font-mono text-slate-400">
+                  {autoConfig.enabled ? (
+                    <span>Next execution in: <strong className="text-emerald-400 font-bold">{formatCountdown(secondsUntilNextCrawl)}</strong> (Cycle: {autoConfig.intervalMinutes}m)</span>
+                  ) : (
+                    <span className="text-amber-400 font-semibold">Scheduler currently paused</span>
+                  )}
+                  {autoConfig.lastRunAt && (
+                    <span className="ml-3 text-slate-500">Last run: {new Date(autoConfig.lastRunAt).toLocaleTimeString('en-GB')}</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      handleTriggerScrapingNow();
+                      setIsAutoCrawlSettingsOpen(false);
+                    }}
+                    disabled={isAutoCrawling || isCrawling}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    <Zap className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Run Job Now</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleDiscoverUpcomingPipeline();
+                      setIsAutoCrawlSettingsOpen(false);
+                    }}
+                    disabled={isAutoCrawling || isCrawling}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 font-semibold text-xs flex items-center gap-1.5 border border-slate-700 disabled:opacity-50"
+                  >
+                    <ListPlus className="w-3.5 h-3.5" />
+                    <span>Harvest Next Upcoming IPO</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Monitored Live Extraction Sources */}
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-white flex items-center gap-2">
+                <Globe className="w-4 h-4 text-sky-400" />
+                <span>Monitored Official Portals & Live Malaysian Research Houses</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 text-[10px] font-mono">
+                {[
+                  'Bursa Malaysia Announcements',
+                  'Securities Commission (SC) Prospectus Exposure',
+                  'The Edge Malaysia IPO Watch',
+                  'iSaham IPO Registry',
+                  'TA Securities Research',
+                  'RHB Investment Bank',
+                  'Mercury Securities',
+                  'Kenanga Investment Bank',
+                  'M+ Online Research',
+                  'Public Investment Bank',
+                  'Tradeview Capital',
+                  'Rakuten Trade',
+                  'Apex Securities',
+                  'MIDF Research',
+                ].map((src) => (
+                  <span key={src} className="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-slate-300">
+                    {src}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Execution Activity History Log */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-white flex items-center gap-2">
+                  <History className="w-4 h-4 text-purple-400" />
+                  <span>Crawl Activity & Harvest History Log</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300 font-mono">
+                    {autoCrawlLogs.length} runs
+                  </span>
+                </div>
+
+                {autoCrawlLogs.length > 0 && (
+                  <button
+                    onClick={() => {
+                      clearAutoCrawlLogs();
+                      setAutoCrawlLogs([]);
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors"
+                  >
+                    Clear History
+                  </button>
+                )}
+              </div>
+
+              {autoCrawlLogs.length === 0 ? (
+                <div className="p-6 rounded-xl bg-slate-950/50 border border-slate-800 text-center text-xs text-slate-400">
+                  <p>No activity recorded yet.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    When the background scheduler triggers jobs or you run manual crawls, execution summaries and newly discovered upcoming IPOs will be logged here.
+                  </p>
+                </div>
+              ) : (
+                <div className="border border-slate-800 rounded-xl overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-800/60 text-xs">
+                  {autoCrawlLogs.map((log) => (
+                    <div key={log.id} className="p-3 bg-slate-950/40 hover:bg-slate-950/80 transition-colors space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                            log.triggerType === 'AUTOMATIC' 
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                              : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                          }`}>
+                            {log.triggerType === 'AUTOMATIC' ? 'AUTO-TRIGGERED' : 'MANUAL'}
+                          </span>
+                          <span className="font-mono text-[11px] text-slate-400">
+                            {new Date(log.timestamp).toLocaleString('en-GB')}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-[11px] font-mono">
+                          {log.newIposDiscoveredCount > 0 && (
+                            <span className="text-emerald-400 font-bold">
+                              +{log.newIposDiscoveredCount} New IPO(s)
+                            </span>
+                          )}
+                          <span className="text-sky-400">
+                            {log.newFairValuesExtractedCount} Targets Updated
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-slate-300 text-[11px] leading-relaxed">
+                        {log.summary}
+                      </p>
+
+                      {log.discoveredIpoNames && log.discoveredIpoNames.length > 0 && (
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <span className="text-[10px] text-slate-500">Discovered IPOs:</span>
+                          {log.discoveredIpoNames.map(name => (
+                            <span key={name} className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+              <span className="text-[11px] text-slate-500 font-mono">
+                Auto-crawler runs in background while the application is active
+              </span>
+              <button
+                onClick={() => setIsAutoCrawlSettingsOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold"
+              >
+                Done
+              </button>
+            </div>
+
           </div>
         </div>
       )}
