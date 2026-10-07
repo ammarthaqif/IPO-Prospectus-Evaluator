@@ -6,6 +6,7 @@ import { IndustryBenchmarksView } from './components/IndustryBenchmarksView';
 import { AiSentimentRedFlagsView } from './components/AiSentimentRedFlagsView';
 import { PdfReportGenerator } from './components/PdfReportGenerator';
 import { ProspectusDocumentViewer } from './components/ProspectusDocumentViewer';
+import { IpoTrackerTableModule } from './components/IpoTrackerTableModule';
 import { UploadProspectusModal } from './components/UploadProspectusModal';
 import { UpdateListingPriceModal } from './components/UpdateListingPriceModal';
 import { ExpertAnalystConsensusModal } from './components/ExpertAnalystConsensusModal';
@@ -91,7 +92,7 @@ export default function App() {
         }
       },
       (err) => {
-        console.warn('[Firebase Cloud Sync notice, using local offline authority]:', err);
+        console.info('[Firebase Cloud Sync notice, using local offline authority]:', err?.message || err);
         setIsCloudLive(false);
       }
     );
@@ -289,6 +290,21 @@ export default function App() {
                 saveStoredDossiers(updatedList);
                 return updatedList;
               });
+            }}
+          />
+        )}
+
+        {activeTab === 'ipo-tracker' && (
+          <IpoTrackerTableModule
+            onSelectProspectusDossier={(stockName) => {
+              const matched = dossiers.find(d => 
+                d.companyName.toLowerCase().includes(stockName.toLowerCase()) ||
+                stockName.toLowerCase().includes(d.companyName.toLowerCase().split(' ')[0])
+              );
+              if (matched) {
+                handleSelectDossier(matched);
+                setActiveTab('dashboard');
+              }
             }}
           />
         )}

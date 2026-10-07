@@ -51,12 +51,44 @@
         }
       },
       "required": ["id", "companyName", "listingMarket"]
+    },
+    "trackedIpo": {
+      "title": "Tracked IPO Item",
+      "description": "Malaysian Bursa IPO tracker item with key issue parameters and research house fair values",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier / stock code for the IPO"
+        },
+        "stockName": {
+          "type": "string",
+          "description": "Short stock trading name"
+        },
+        "price": {
+          "type": "number",
+          "description": "IPO offer price per share in Ringgit Malaysia"
+        },
+        "status": {
+          "type": "string",
+          "description": "Listing status: PAST_LISTED or UPCOMING"
+        },
+        "listingPublic": {
+          "type": "string",
+          "description": "Official public listing date on Bursa Malaysia"
+        }
+      },
+      "required": ["id", "stockName", "price", "status"]
     }
   },
   "firestore": {
     "/prospectusDossiers/{dossierId}": {
       "schema": "prospectusDossier",
       "description": "Publicly shared library of evaluated IPO prospectuses accessible in real-time to all users"
+    },
+    "/trackedIpos/{ipoId}": {
+      "schema": "trackedIpo",
+      "description": "Comprehensive tracker of past and upcoming Bursa Malaysia IPOs with research house target prices"
     }
   }
 }

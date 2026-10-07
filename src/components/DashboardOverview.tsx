@@ -19,7 +19,8 @@ import {
   Layers,
   Scale,
   UploadCloud,
-  Trash2
+  Trash2,
+  Table2
 } from 'lucide-react';
 import { ProspectusDossier, FinancialYearData } from '../types';
 import { ProspectusRadarComparison } from './ProspectusRadarComparison';
@@ -137,6 +138,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           {/* Quick AI Conviction & Stance Badge + Upload Action */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => onNavigateTab('ipo-tracker')}
+              className="flex items-center gap-1.5 px-3.5 py-3 rounded-xl bg-gradient-to-r from-emerald-950/80 to-teal-950/80 hover:from-emerald-900/80 hover:to-teal-900/80 border border-emerald-500/40 text-xs font-semibold text-emerald-300 hover:text-white transition-all cursor-pointer shadow-sm group"
+              title="View past & upcoming Bursa Malaysia IPO tracker table with 18 research houses fair values"
+            >
+              <Table2 className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>Bursa IPO Master Tracker</span>
+            </button>
+
             {availableDossiers.length > 1 && (
               <button
                 type="button"

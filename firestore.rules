@@ -17,5 +17,13 @@ service cloud.firestore {
     match /test/{docId} {
       allow read, write: if true;
     }
+
+    // Tracked Malaysian Bursa IPOs and research house fair values
+    match /trackedIpos/{ipoId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.id == ipoId
+                            && request.resource.data.stockName is string;
+      allow delete: if true;
+    }
   }
 }

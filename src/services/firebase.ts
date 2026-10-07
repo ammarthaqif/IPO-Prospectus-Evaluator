@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getFirestore, 
   initializeFirestore,
+  setLogLevel,
   collection, 
   doc, 
   getDocs, 
@@ -17,17 +18,24 @@ import type { ProspectusDossier } from '../types';
 import { normalizeCompanyName, normalizeRegistrationNo, getDeletedDossierIds } from '../utils/dossierStorage';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Suppress internal SDK network probes and connection warnings to prevent false error reports
+try {
+  setLogLevel('silent');
+} catch {
+  // Ignore
+}
+
 // Initialize Firebase App instance singleton
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Configure Firestore with long polling enabled to prevent Cloud Run/proxy WebChannel streaming timeouts
+// Configure Firestore with pure long polling enabled to prevent Cloud Run/proxy WebChannel streaming timeouts
+// Note: We do NOT enable experimentalAutoDetectLongPolling because its 10-second probing timer logs false backend timeouts
 let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(
     app,
     {
       experimentalForceLongPolling: true,
-      experimentalAutoDetectLongPolling: true,
     },
     firebaseConfig.firestoreDatabaseId || undefined
   );
@@ -306,7 +314,7 @@ export function subscribeToCloudDossiers(
       if (err.message && (err.message.includes('offline') || err.message.includes('backend'))) {
         console.info('[Firebase] Operating in resilient offline mode with local dossier store.');
       } else {
-        console.warn('[Firebase] Realtime cloud listener notice:', err);
+        console.info('[Firebase] Realtime cloud listener notice:', err?.message || err);
       }
       if (onError) onError(err);
     }
@@ -318,8 +326,12 @@ export function subscribeToCloudDossiers(
  * Uses a safe timeout so cold boots and offline modes never stall.
  */
 export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): Promise<void> {
+  if (typeof window !== 'undefined' && localStorage.getItem('vanguard_cloud_seed_completed')) {
+    return;
+  }
+
   const timeoutPromise = new Promise<void>((_, reject) => 
-    setTimeout(() => reject(new Error('Seed timeout')), 3500)
+    setTimeout(() => reject(new Error('Seed timeout')), 2500)
   );
 
   const seedPromise = (async () => {
@@ -328,21 +340,28 @@ export async function seedInitialCloudDossiers(defaults: ProspectusDossier[]): P
       if (deletedIds.has(d.id) || d.id === 'cloudnexus-2025' || d.id === 'sample-saas-2024') {
         continue;
       }
-      const docRef = doc(db, COLLECTION_NAME, d.id);
-      const existing = await getDoc(docRef);
-      if (!existing.exists()) {
-        const normName = normalizeCompanyName(d.companyName);
-        const normReg = normalizeRegistrationNo(d.registrationNo || '');
-        const sanitized = sanitizeDossierForFirestore(d);
-        await setDoc(docRef, {
-          ...sanitized,
-          normalizedCompanyName: normName,
-          normalizedRegistrationNo: normReg,
-          isCloudShared: true,
-          uploaderEmail: 'system-institutional',
-          cloudSharedAt: new Date().toISOString(),
-        });
+      try {
+        const docRef = doc(db, COLLECTION_NAME, d.id);
+        const existing = await getDoc(docRef);
+        if (!existing.exists()) {
+          const normName = normalizeCompanyName(d.companyName);
+          const normReg = normalizeRegistrationNo(d.registrationNo || '');
+          const sanitized = sanitizeDossierForFirestore(d);
+          await setDoc(docRef, {
+            ...sanitized,
+            normalizedCompanyName: normName,
+            normalizedRegistrationNo: normReg,
+            isCloudShared: true,
+            uploaderEmail: 'system-institutional',
+            cloudSharedAt: new Date().toISOString(),
+          });
+        }
+      } catch {
+        // Individual item offline fallback
       }
+    }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vanguard_cloud_seed_completed', 'true');
     }
     console.info('[Firebase] Baseline default dossiers verified in Cloud database.');
   })();
@@ -392,3 +411,72 @@ export async function deleteProspectusFromCloud(dossierId: string): Promise<bool
     return false;
   }
 }
+
+// ==========================================
+// Tracked IPOs Real-time Synchronization
+// ==========================================
+
+const TRACKED_IPOS_COLLECTION = 'trackedIpos';
+
+/**
+ * Saves a tracked IPO item to Cloud Firestore
+ */
+export async function saveTrackedIpoToCloud(ipo: any): Promise<boolean> {
+  if (!ipo || !ipo.id) return false;
+  try {
+    const docRef = doc(db, TRACKED_IPOS_COLLECTION, ipo.id);
+    await setDoc(docRef, JSON.parse(JSON.stringify(ipo)), { merge: true });
+    return true;
+  } catch (err) {
+    console.warn(`[Firebase] Could not save tracked IPO ${ipo.id} to cloud:`, err);
+    return false;
+  }
+}
+
+/**
+ * Saves all tracked IPOs in bulk to Cloud Firestore
+ */
+export async function saveAllTrackedIposToCloud(ipos: any[]): Promise<boolean> {
+  if (!Array.isArray(ipos) || ipos.length === 0) return false;
+  try {
+    for (const item of ipos) {
+      if (item && item.id) {
+        const docRef = doc(db, TRACKED_IPOS_COLLECTION, item.id);
+        await setDoc(docRef, JSON.parse(JSON.stringify(item)), { merge: true });
+      }
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Firebase] Bulk tracked IPO save warning:', err);
+    return false;
+  }
+}
+
+/**
+ * Subscribes to real-time changes on tracked IPOs in Cloud Firestore
+ */
+export function subscribeToTrackedIpos(
+  onUpdate: (cloudIpos: any[]) => void,
+  onError?: (err: Error) => void
+): Unsubscribe {
+  const colRef = collection(db, TRACKED_IPOS_COLLECTION);
+  return onSnapshot(
+    colRef,
+    (snap) => {
+      const list: any[] = [];
+      snap.forEach((d) => {
+        const data = d.data();
+        if (data && data.id && data.stockName) {
+          list.push(data);
+        }
+      });
+      if (list.length > 0) {
+        onUpdate(list);
+      }
+    },
+    (err) => {
+      if (onError) onError(err);
+    }
+  );
+}
+

@@ -351,3 +351,94 @@ export interface ReportConfig {
   };
   customNotes: string;
 }
+
+// ==========================================
+// Malaysian Bursa IPO Tracker & Crawled Fair Values
+// ==========================================
+
+export interface ResearchHouseMeta {
+  key: string;
+  name: string;
+  shortName: string;
+  description: string;
+  color: string;
+  badgeBg: string;
+}
+
+export interface ResearchHouseFairValue {
+  houseKey: string;
+  houseName: string;
+  fairValue?: number;
+  rating?: string;
+  reportDate?: string;
+  sourceCitation?: string;
+  sourceUrl?: string;
+}
+
+export interface TrackedIpoItem {
+  id: string;
+  stockName: string;
+  fullName?: string;
+  logoUrl?: string;
+  logoText?: string;
+  logoBgColor?: string;
+  logoTextColor?: string;
+  
+  // Pricing & Status
+  price: number; // IPO offer price in RM
+  status: 'PAST_LISTED' | 'UPCOMING';
+  
+  // Dates
+  openMiti?: string | null;
+  closeMiti?: string | null;
+  openPublic: string;
+  closePublic: string;
+  ballotPublic: string;
+  listingPublic: string;
+  
+  // Shares & Market Cap
+  mitiShareM?: number | null;
+  publicShareM: number;
+  totalShareM: number;
+  marketCapRMJuta: number;
+  
+  // Application Registration Numbers & Oversubscription
+  mitiRn?: number | string | null;
+  maybankPublicRn?: number | string | null;
+  osPublic?: number | null; // Oversubscription times (x)
+  
+  // Classification
+  syariah: boolean;
+  companyType: string;
+  
+  // Debut Open (9 am debut)
+  nineAmOpen?: {
+    status: 'FAIL' | 'GAIN' | 'PAR' | 'PENDING';
+    price?: number;
+    text: string;
+  };
+  
+  // Community / AI Scores
+  iSahamScore?: string | null;
+  iSahamM3AiScore?: string | null;
+  
+  // Research House Fair Values Map (keyed by houseKey, e.g. ta: 0.39)
+  fairValues: {
+    [houseKey: string]: number | undefined;
+  };
+  
+  // Detailed metadata / citations per research house
+  fairValueNotes?: {
+    [houseKey: string]: {
+      citation?: string;
+      sourceUrl?: string;
+      crawledAt?: string;
+      basis?: string;
+    };
+  };
+
+  lastCrawledAt?: string;
+  sourceUrl?: string;
+  notes?: string;
+}
+

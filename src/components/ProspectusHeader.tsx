@@ -14,7 +14,8 @@ import {
   PieChart,
   SlidersHorizontal,
   UploadCloud,
-  Layers
+  Layers,
+  Table2
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
 import { DossierSwitcherModal } from './DossierSwitcherModal';
@@ -57,6 +58,7 @@ export const ProspectusHeader: React.FC<ProspectusHeaderProps> = ({
 
   const tabs = [
     { id: 'dashboard', label: 'Executive Dashboard', icon: BarChart3 },
+    { id: 'ipo-tracker', label: 'Bursa IPO Tracker & Fair Values', icon: Table2 },
     { id: 'financials', label: 'Financials & Margins', icon: TrendingUp },
     { id: 'benchmarks', label: 'Industry Benchmarks', icon: SlidersHorizontal },
     { id: 'redflags', label: 'AI Red Flags & Sentiment', icon: AlertTriangle, badge: criticalFlagsCount + highFlagsCount },
