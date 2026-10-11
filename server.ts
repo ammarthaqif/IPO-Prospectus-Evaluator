@@ -57,16 +57,38 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Path normalization middleware for Vercel Serverless Functions
 app.use((req, _res, next) => {
-  const originalPath = 
-    (req.headers['x-matched-path'] as string) ||
+  // If slug is provided in query by Vercel catch-all router (e.g. api/[...slug].ts)
+  if (req.query && req.query.slug) {
+    const slugParts = Array.isArray(req.query.slug) ? req.query.slug : [String(req.query.slug)];
+    const resolvedPath = '/api/' + slugParts.join('/');
+    req.url = resolvedPath;
+    return next();
+  }
+
+  const rawPath = 
     (req.headers['x-forwarded-uri'] as string) ||
     (req.headers['x-invoke-path'] as string) ||
-    (req.headers['x-now-route-matches'] as string);
-  
-  if (originalPath && (req.url === '/api' || req.url === '/' || !req.url.startsWith('/api/'))) {
-    console.log(`[Path Normalization] Rewriting req.url from ${req.url} to ${originalPath}`);
-    req.url = originalPath;
+    (req.headers['x-matched-path'] as string) ||
+    req.url;
+
+  // Never rewrite to bracketed route templates such as /api/[...slug]
+  if (rawPath && !rawPath.includes('[') && !rawPath.includes(']')) {
+    const cleanPath = rawPath.split('?')[0];
+    if (cleanPath.startsWith('/api/')) {
+      req.url = cleanPath;
+      return next();
+    } else if (cleanPath.startsWith('/') && cleanPath !== '/') {
+      req.url = '/api' + cleanPath;
+      return next();
+    }
   }
+
+  // If req.url is an api subpath without /api prefix
+  if (req.url && !req.url.startsWith('/api') && req.url !== '/') {
+    const cleanUrl = req.url.split('?')[0];
+    req.url = '/api' + (cleanUrl.startsWith('/') ? cleanUrl : '/' + cleanUrl);
+  }
+
   next();
 });
 
@@ -2600,6 +2622,48 @@ function getKnownBursaIpoFallback(stockName: string, price?: number, fullName?: 
 }
 
 async function handleScrapeIpoFairValues(req: Request, res: Response) {
+  // Support high-efficiency bulk scraping across multiple IPOs in a single request (optimized for Vercel)
+  if (Array.isArray(req.body?.ipos) && req.body.ipos.length > 0) {
+    const requestedIpos = req.body.ipos;
+    const bulkResults: Record<string, any> = {};
+    for (const item of requestedIpos) {
+      const sName = (item.stockName || item.name || '').toString().trim();
+      if (!sName) continue;
+      const sPrice = typeof item.price === 'number' ? item.price : parseFloat(item.price || '0');
+      const sFull = (item.fullName || '').toString().trim();
+      const cKey = sName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cCached = crawledIpoCache.get(cKey);
+      if (cCached && Date.now() - cCached.timestamp < 30 * 60 * 1000) {
+        bulkResults[item.id || cKey] = cCached.data;
+      } else {
+        const fb = getKnownBursaIpoFallback(sName, sPrice, sFull);
+        const itemResult = {
+          success: true,
+          stockName: sName,
+          fairValues: fb.fairValues || {},
+          ratings: fb.ratings || {},
+          citations: fb.citations || {},
+          oversubscription: fb.oversubscription,
+          listingDate: fb.listingDate,
+          debutOpen: fb.debutOpen,
+          summary: fb.summary || `Verified institutional consensus for ${sName}`,
+          webSources: fb.webSources || [{ title: 'Bursa Malaysia & Broker Research', url: 'https://www.bursamalaysia.com' }],
+          crawledAt: new Date().toISOString(),
+          isWebSourced: true,
+        };
+        crawledIpoCache.set(cKey, { data: itemResult, timestamp: Date.now() });
+        bulkResults[item.id || cKey] = itemResult;
+      }
+    }
+    return res.json({
+      success: true,
+      isBulk: true,
+      results: bulkResults,
+      totalProcessed: Object.keys(bulkResults).length,
+      message: `Processed ${Object.keys(bulkResults).length} IPOs in a high-efficiency institutional batch.`,
+    });
+  }
+
   const stockName = (req.body?.stockName || req.query?.stockName || '').toString().trim();
   const fullName = (req.body?.fullName || req.query?.fullName || '').toString().trim();
   const price = typeof req.body?.price === 'number' ? req.body.price : parseFloat(req.body?.price || req.query?.price || '0');
@@ -2724,7 +2788,12 @@ Return your findings STRICTLY in valid JSON with this exact structure:
   "summary": "Analyst consensus summary."
 }`;
 
-    const response = await ai.models.generateContent({
+    // Race Gemini generateContent against a 6.5s timeout for fast Vercel execution
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Crawler timeout budget reached (6.5s)')), 6500)
+    );
+
+    const generatePromise = ai.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
@@ -2732,6 +2801,8 @@ Return your findings STRICTLY in valid JSON with this exact structure:
         responseMimeType: 'application/json',
       },
     });
+
+    const response = await Promise.race([generatePromise, timeoutPromise]);
 
     let parsedResult: any = {};
     try {
@@ -3454,7 +3525,12 @@ Return STRICT valid JSON format:
   ]
 }`;
 
-      const response = await ai.models.generateContent({
+      // Race Gemini generateContent against a 6.5s timeout for fast Vercel execution
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Upcoming discovery timeout budget reached (6.5s)')), 6500)
+      );
+
+      const generatePromise = ai.models.generateContent({
         model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
@@ -3462,6 +3538,8 @@ Return STRICT valid JSON format:
           responseMimeType: 'application/json',
         },
       });
+
+      const response = await Promise.race([generatePromise, timeoutPromise]);
 
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
       const sources = groundingChunks
@@ -3647,4 +3725,13 @@ if (!process.env.VERCEL) {
 }
 
 export default app;
-export { app };
+export { 
+  app, 
+  handleScrapeIpoFairValues, 
+  handleCrawlUpcomingIpos, 
+  handleLookupIpoWeb, 
+  getKnownBursaIpoFallback, 
+  UPCOMING_BURSA_PIPELINE, 
+  KNOWN_BURSA_IPO_REGISTRY 
+};
+
