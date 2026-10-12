@@ -5,7 +5,54 @@ const STORAGE_KEY = 'vanguard_tracked_ipos_v1';
 const LAST_CRAWL_KEY = 'vanguard_tracked_ipos_last_crawl';
 
 /**
- * Loads tracked IPOs from localStorage, falling back to default IPOs from spreadsheet
+ * Strictly verifies that an IPO candidate belongs to a company in Malaysia
+ * to be listed or scheduled on Bursa Malaysia.
+ * Any non-Malaysian company or foreign exchange listing is strictly disqualified.
+ */
+export function isMalaysianIpo(item: Partial<TrackedIpoItem>): boolean {
+  if (!item) return false;
+  const stockName = (item.stockName || '').trim();
+  const fullName = (item.fullName || '').trim();
+  const notes = (item.notes || '').trim();
+  const combined = `${stockName} ${fullName} ${notes}`.toLowerCase();
+  
+  // 1. Foreign Exchanges & Foreign Jurisdiction Indicators (strictly rejected)
+  const foreignMarkets = [
+    'nasdaq', 'nyse', 'sgx', 'hkex', 'asx', 'idx', 'london stock exchange', 'lse',
+    'singapore stock', 'singapore ipo', 'us ipo', 'hong kong ipo', 'china ipo',
+    'indonesia ipo', 'idx ipo', 'asx ipo', 'wall street', 'tokyo stock', 'tse',
+    'frankfurt', 'euronext', 'taiwan stock', 'twse', 'bombay', 'bse ipo', 'nse ipo',
+    'sec.gov', 'delaware', 'cayman islands', 'british virgin islands'
+  ];
+  for (const fm of foreignMarkets) {
+    if (combined.includes(fm)) return false;
+  }
+
+  // 2. Foreign mega-caps and non-Malaysian corporate entities
+  const foreignEntities = [
+    'aapl', 'apple inc', 'tsla', 'tesla', 'msft', 'microsoft', 'amzn', 'amazon',
+    'googl', 'google', 'alphabet', 'nvda', 'nvidia', 'meta platforms', 'facebook',
+    'arm holdings', 'reddit', 'shein', 'temu', 'bytedance', 'tiktok', 'grab holdings'
+  ];
+  for (const fe of foreignEntities) {
+    if (combined.includes(fe)) return false;
+  }
+
+  // 3. Positive Malaysian Corporate Affirmation:
+  // Must satisfy at least one affirmative indicator of Malaysian incorporation / Bursa listing:
+  const hasBerhad = /\b(berhad|bhd)\b/i.test(fullName) || /\b(berhad|bhd)\b/i.test(stockName);
+  const hasBursaReference = /\b(bursa|ace market|main market|leap market|miti|bumiputera|suruhanjaya sekuriti|sc exposure|malaysia)\b/i.test(combined);
+  const isDefault = DEFAULT_TRACKED_IPOS.some(d => d.id === item.id || d.stockName.toLowerCase() === stockName.toLowerCase());
+  const hasMalaysianIdentifiers = (item.mitiRn !== undefined && item.mitiRn !== null) ||
+                                  (item.maybankPublicRn !== undefined && item.maybankPublicRn !== null) ||
+                                  (typeof item.mitiShareM === 'number' && item.mitiShareM > 0);
+
+  return hasBerhad || hasBursaReference || isDefault || hasMalaysianIdentifiers;
+}
+
+/**
+ * Loads tracked IPOs from localStorage, strictly removing any non-Malaysian company,
+ * and falling back to default IPOs from spreadsheet.
  */
 export function loadStoredTrackedIpos(): TrackedIpoItem[] {
   if (typeof window === 'undefined') return DEFAULT_TRACKED_IPOS;
@@ -17,8 +64,9 @@ export function loadStoredTrackedIpos(): TrackedIpoItem[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Merge any missing fields or new research house keys
-      return parsed.map(item => {
+      // Strictly remove any IPO that is not a Malaysian company to be listed on Bursa Malaysia
+      const malaysianOnly = parsed.filter(item => isMalaysianIpo(item));
+      const processed = malaysianOnly.map(item => {
         const defaultMatch = DEFAULT_TRACKED_IPOS.find(d => d.id === item.id);
         return {
           ...defaultMatch,
@@ -33,6 +81,13 @@ export function loadStoredTrackedIpos(): TrackedIpoItem[] {
           },
         };
       });
+
+      // If non-Malaysian items were purged, immediately persist the clean list
+      if (processed.length !== parsed.length) {
+        saveStoredTrackedIpos(processed);
+      }
+
+      return processed.length > 0 ? processed : DEFAULT_TRACKED_IPOS;
     }
   } catch (err) {
     console.warn('[IpoStorage] Error reading stored IPOs:', err);
@@ -41,12 +96,13 @@ export function loadStoredTrackedIpos(): TrackedIpoItem[] {
 }
 
 /**
- * Saves tracked IPOs to localStorage
+ * Saves tracked IPOs to localStorage, strictly enforcing Malaysian companies only
  */
 export function saveStoredTrackedIpos(ipos: TrackedIpoItem[]): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ipos));
+    const malaysianOnly = ipos.filter(item => isMalaysianIpo(item));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(malaysianOnly));
   } catch (err) {
     console.warn('[IpoStorage] Error writing stored IPOs:', err);
   }

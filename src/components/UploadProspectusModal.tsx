@@ -439,7 +439,7 @@ function parseProspectusClientHeuristically(text: string, companyHint?: string):
     registrationNo,
     sector,
     subSector,
-    listingMarket: textLower.includes('nasdaq') ? 'NASDAQ Global Market' : (textLower.includes('ace') ? 'Bursa Malaysia ACE Market' : 'Bursa Malaysia Main Market'),
+    listingMarket: textLower.includes('ace') ? 'Bursa Malaysia ACE Market' : (textLower.includes('leap') ? 'Bursa Malaysia LEAP Market' : 'Bursa Malaysia Main Market'),
     publicIssueShares: publicIssue,
     offerForSaleShares: offerForSale,
     totalOfferShares: publicIssue + offerForSale,

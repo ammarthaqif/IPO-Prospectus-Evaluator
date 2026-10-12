@@ -45,7 +45,8 @@ import {
   loadStoredTrackedIpos, 
   saveStoredTrackedIpos, 
   resetTrackedIposToDefault, 
-  calculateIpoConsensus 
+  calculateIpoConsensus,
+  isMalaysianIpo
 } from '../services/ipoStorage';
 import { 
   crawlSingleIpoFairValues, 
@@ -128,9 +129,10 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
     const unsub = subscribeToTrackedIpos(
       (cloudList) => {
         if (cloudList && cloudList.length > 0) {
+          const malaysianCloudList = cloudList.filter(item => isMalaysianIpo(item));
           setIpos(prev => {
-            const cloudMap = new Map(cloudList.map(item => [item.id, item]));
-            return prev.map(local => cloudMap.get(local.id) || local);
+            const cloudMap = new Map(malaysianCloudList.map(item => [item.id, item]));
+            return prev.map(local => cloudMap.get(local.id) || local).filter(isMalaysianIpo);
           });
         }
       },
@@ -141,9 +143,12 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
     return () => unsub();
   }, []);
 
-  // Filtered & Searched IPO list
+  // Filtered & Searched IPO list (Exclusively Malaysian Companies)
   const filteredIpos = useMemo(() => {
     return ipos.filter(ipo => {
+      // 0. Strict Jurisdiction Mandate: Remove any non-Malaysian company
+      if (!isMalaysianIpo(ipo)) return false;
+
       // 1. Status Filter
       if (activeFilter === 'UPCOMING' && ipo.status !== 'UPCOMING') return false;
       if (activeFilter === 'PAST' && ipo.status !== 'PAST_LISTED') return false;
@@ -472,6 +477,16 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
       fairValueNotes: {},
       notes: `Registered Malaysian company listing on Bursa Malaysia.`,
     };
+
+    if (!isMalaysianIpo(newIpo)) {
+      setAutoCrawlToast({
+        text: `Only companies in Malaysia listed on Bursa Malaysia are allowed. "${newIpo.stockName}" was rejected.`,
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        type: 'info',
+      });
+      setTimeout(() => setAutoCrawlToast(null), 6000);
+      return;
+    }
 
     const updated = [...ipos, newIpo];
     setIpos(updated);

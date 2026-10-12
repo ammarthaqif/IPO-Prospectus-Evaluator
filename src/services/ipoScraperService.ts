@@ -766,23 +766,8 @@ export function clearAutoCrawlLogs(): void {
   }
 }
 
-/**
- * Strictly verifies that an IPO belongs to a company in Malaysia listed/scheduled on Bursa Malaysia.
- */
-export function isMalaysianIpo(item: Partial<TrackedIpoItem>): boolean {
-  if (!item) return false;
-  const combined = `${item.stockName || ''} ${item.fullName || ''} ${item.notes || ''}`.toLowerCase();
-  
-  const foreignMarkers = [
-    'nasdaq', 'nyse', 'sgx', 'hkex', 'asx', 'idx', 'london stock exchange', 'lse',
-    'singapore ipo', 'us ipo', 'hong kong ipo', 'china ipo', 'indonesia ipo',
-    'wall street', 'tokyo'
-  ];
-  for (const fm of foreignMarkers) {
-    if (combined.includes(fm)) return false;
-  }
-  return true;
-}
+import { isMalaysianIpo } from './ipoStorage';
+export { isMalaysianIpo };
 
 /**
  * Crawls and scrapes web research reports, news, and broker notes for a single IPO.
