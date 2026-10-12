@@ -465,3 +465,39 @@ export interface AutoCrawlLogEntry {
   sourcesCount: number;
 }
 
+export interface BursaIpoAnnouncementItem {
+  id: string;
+  announcementDate: string; // e.g. "28 Oct 2026"
+  companyName: string; // e.g. "SOLARSYS ENERGY BERHAD"
+  stockName: string; // e.g. "SOLARSYS"
+  stockCode?: string; // e.g. "0328"
+  category: string; // e.g. "IPO Announcement / Admission to LEAP Market" or "Timetable for IPO"
+  title: string; // e.g. "INITIAL PUBLIC OFFERING IN CONJUNCTION WITH THE LISTING..."
+  marketTier: 'Main Market' | 'ACE Market' | 'LEAP Market';
+  offerPrice?: number; // e.g. 0.38
+  currency?: string; // "RM"
+  listingDate?: string; // e.g. "06/11/2026"
+  openPublic?: string;
+  closePublic?: string;
+  ballotPublic?: string;
+  url: string; // official bursa url
+  syariah?: boolean;
+  status: 'UPCOMING' | 'PAST_LISTED';
+  keyHighlights?: string;
+}
+
+export interface BursaScrapeResult {
+  success: boolean;
+  announcementsCount: number;
+  announcements: BursaIpoAnnouncementItem[];
+  discoveredIpos: TrackedIpoItem[];
+  updatedIpos: TrackedIpoItem[];
+  totalNewDiscoveredCount: number;
+  totalFairValuesDiscoveredCount: number;
+  sources: Array<{ title: string; url: string }>;
+  scraperEngine: string;
+  timestamp: string;
+  message: string;
+}
+
+

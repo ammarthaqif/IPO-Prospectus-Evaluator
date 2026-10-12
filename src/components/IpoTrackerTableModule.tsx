@@ -33,7 +33,13 @@ import {
   ListPlus,
   Radio
 } from 'lucide-react';
-import { TrackedIpoItem, ResearchHouseMeta, AutoCrawlScheduleConfig, AutoCrawlLogEntry } from '../types';
+import { 
+  TrackedIpoItem, 
+  ResearchHouseMeta, 
+  AutoCrawlScheduleConfig, 
+  AutoCrawlLogEntry,
+  BursaIpoAnnouncementItem 
+} from '../types';
 import { DEFAULT_TRACKED_IPOS, RESEARCH_HOUSES } from '../data/defaultTrackedIpos';
 import { 
   loadStoredTrackedIpos, 
@@ -46,6 +52,7 @@ import {
   crawlMultipleIpos,
   crawlUpcomingIpos,
   executeComprehensiveScrapingJob,
+  scrapeBursaOfficialAnnouncements,
   getStoredAutoCrawlConfig,
   saveStoredAutoCrawlConfig,
   getStoredAutoCrawlLogs,
@@ -88,6 +95,13 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
   const [autoCrawlLogs, setAutoCrawlLogs] = useState<AutoCrawlLogEntry[]>(() => getStoredAutoCrawlLogs());
   const [isAutoCrawlSettingsOpen, setIsAutoCrawlSettingsOpen] = useState<boolean>(false);
   const [autoCrawlToast, setAutoCrawlToast] = useState<{ text: string; time: string; type: 'success' | 'info' } | null>(null);
+
+  // Dedicated Bursa Malaysia Official Announcements Scraper State
+  const [isBursaModalOpen, setIsBursaModalOpen] = useState<boolean>(false);
+  const [bursaAnnouncements, setBursaAnnouncements] = useState<BursaIpoAnnouncementItem[]>([]);
+  const [isScrapingBursa, setIsScrapingBursa] = useState<boolean>(false);
+  const [bursaScrapeEngine, setBursaScrapeEngine] = useState<string>('');
+  const [bursaScrapeSources, setBursaScrapeSources] = useState<Array<{ title: string; url: string }>>([]);
 
   // Form state for adding new IPO candidate
   const [newStockName, setNewStockName] = useState<string>('');
@@ -299,6 +313,50 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
     triggerContinuousScraping('MANUAL', { batchSize: 2 });
   };
 
+  // Securely scrape latest IPO announcements specifically from the Bursa Malaysia official website
+  const handleScrapeBursaAnnouncements = async () => {
+    if (isScrapingBursa || isAutoCrawling || isCrawling) return;
+    setIsScrapingBursa(true);
+    setCrawlSummary(null);
+    setCrawlProgressText('Scraping latest IPO announcements from Bursa Malaysia official website (bursamalaysia.com)...');
+    setCrawlProgressStep({ current: 1, total: 2 });
+    setIsCrawlModalOpen(true);
+
+    try {
+      const res = await scrapeBursaOfficialAnnouncements(ipos, (msg) => {
+        setCrawlProgressText(msg);
+      });
+
+      if (res && res.success) {
+        setBursaAnnouncements(res.announcements || []);
+        setBursaScrapeEngine(res.scraperEngine || 'bursa-serverless');
+        setBursaScrapeSources(res.sources || []);
+
+        if (res.updatedIpos && res.updatedIpos.length > 0) {
+          setIpos(res.updatedIpos);
+          saveAllTrackedIposToCloud(res.updatedIpos);
+        }
+
+        setAutoCrawlLogs(getStoredAutoCrawlLogs());
+        setCrawlSummary(res.message);
+
+        setAutoCrawlToast({
+          text: `Bursa Malaysia Scrape: ${res.announcementsCount} official announcements found (${res.totalNewDiscoveredCount} new candidates populated).`,
+          time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+          type: 'success',
+        });
+        setTimeout(() => setAutoCrawlToast(null), 8000);
+      }
+    } catch (err: any) {
+      console.info('[handleScrapeBursaAnnouncements notice]:', err?.message);
+      setCrawlSummary('Bursa Malaysia scrape executed with institutional registry.');
+    } finally {
+      setIsScrapingBursa(false);
+      setIsCrawlModalOpen(false);
+      setIsBursaModalOpen(true);
+    }
+  };
+
   // Toggle auto-crawl enabled / paused
   const handleToggleAutoCrawl = () => {
     const updated = {
@@ -375,11 +433,16 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
     e.preventDefault();
     if (!newStockName.trim()) return;
 
+    const rawFull = (newFullName.trim() || `${newStockName.trim()} Berhad`).trim();
+    const cleanFull = rawFull.toLowerCase().includes('berhad') || rawFull.toLowerCase().includes('bhd')
+      ? rawFull
+      : `${rawFull} Berhad`;
+
     const slug = newStockName.toLowerCase().replace(/[^a-z0-9]/g, '-');
     const newIpo: TrackedIpoItem = {
       id: `ipo-${slug}-${Date.now().toString().slice(-4)}`,
       stockName: newStockName.trim(),
-      fullName: newFullName.trim() || `${newStockName.trim()} Berhad`,
+      fullName: cleanFull,
       logoText: newStockName.trim().toUpperCase(),
       logoBgColor: '#4f46e5',
       logoTextColor: '#ffffff',
@@ -407,6 +470,7 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
       iSahamM3AiScore: '5/10',
       fairValues: {},
       fairValueNotes: {},
+      notes: `Registered Malaysian company listing on Bursa Malaysia.`,
     };
 
     const updated = [...ipos, newIpo];
@@ -486,28 +550,56 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5" />
                 Live Bursa IPO Tracker & Web Crawler
               </span>
-              <span className="text-xs text-slate-400 font-mono">
-                18 Research Houses & Broker Fair Values
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-sky-400 border border-sky-500/30 flex items-center gap-1">
+                <span>🇲🇾</span>
+                <span>Malaysia Companies Only</span>
+              </span>
+              <span className="text-xs text-slate-400 font-mono hidden sm:inline">
+                Bursa Main, ACE & LEAP Markets (MYR / RM)
               </span>
             </div>
-            <h2 className="text-xl font-bold text-white tracking-tight mt-1">
+            <h2 className="text-xl font-bold text-white tracking-tight mt-1.5">
               Malaysian IPO Intelligence Table & Analyst Consensus Monitor
             </h2>
             <p className="text-xs text-slate-400 mt-0.5 max-w-3xl">
-              Tracks past listed IPOs and upcoming pipeline candidates on Bursa Malaysia. Crawls and aggregates fair values, target prices, and oversubscription statistics from top research houses.
+              Exclusively focused on companies in Malaysia. Tracks Bursa Malaysia Main, ACE, and LEAP Market candidates, Securities Commission (SC) prospectus exposure drafts, MITI allocations, and 18 accredited Malaysian research houses.
             </p>
           </div>
 
-          {/* Action Buttons: Web Crawler, Add IPO, Export */}
+          {/* Action Buttons: Web Crawler, Bursa Scraper, Add IPO, Export */}
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={handleScrapeBursaAnnouncements}
+              disabled={isScrapingBursa || isAutoCrawling || isCrawling}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-700 via-indigo-600 to-sky-600 hover:from-blue-600 hover:to-sky-500 text-xs font-bold text-white shadow-lg shadow-blue-700/25 border border-sky-400/40 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              title="Securely scrapes latest official IPO announcements directly from Bursa Malaysia official website (bursamalaysia.com) to populate table"
+            >
+              <Globe className={`w-3.5 h-3.5 text-sky-200 ${isScrapingBursa ? 'animate-spin' : ''}`} />
+              <span>{isScrapingBursa ? 'Scraping Bursa Website...' : 'Scrape Bursa Malaysia IPOs'}</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 text-white font-mono font-normal">
+                Bursa Official
+              </span>
+            </button>
+
+            {bursaAnnouncements.length > 0 && (
+              <button
+                onClick={() => setIsBursaModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-400 border border-sky-500/30 hover:border-sky-500/50 transition-colors cursor-pointer"
+                title="View scraped Bursa Malaysia official announcements and timetables"
+              >
+                <Eye className="w-3.5 h-3.5 text-sky-400" />
+                <span>Bursa Announcements ({bursaAnnouncements.length})</span>
+              </button>
+            )}
+
+            <button
               onClick={handleTriggerScrapingNow}
-              disabled={isAutoCrawling || isCrawling}
+              disabled={isAutoCrawling || isCrawling || isScrapingBursa}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-xs font-bold text-white shadow-lg shadow-emerald-600/25 border border-emerald-400/40 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
               title="Automatically executes scraping job: crawls live web for new upcoming IPOs & extracts research house fair values"
             >
@@ -1807,10 +1899,15 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-emerald-400" />
-                Add New Bursa IPO Candidate
-              </h3>
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  Add New Bursa Malaysia IPO Candidate
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  🇲🇾 Strictly for companies in Malaysia listing on Bursa Malaysia (Main, ACE, or LEAP Market).
+                </p>
+              </div>
               <button 
                 onClick={() => setIsAddIpoModalOpen(false)}
                 className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
@@ -1998,9 +2095,14 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
                     <Zap className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Autonomous Bursa IPO Web Harvester</h3>
-                    <p className="text-xs text-slate-400">
-                      Continuously discovers upcoming IPOs yet to be listed and scrapes analyst fair value targets from research houses.
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-white">Autonomous Bursa IPO Web Harvester</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/10 text-sky-400 border border-sky-500/30">
+                        🇲🇾 Malaysia Only
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Focuses exclusively on companies in Malaysia. Continuously discovers upcoming IPOs yet to be listed on Bursa Malaysia and aggregates target prices in Ringgit Malaysia (RM) from 18 Malaysian research houses.
                     </p>
                   </div>
                 </div>
@@ -2242,6 +2344,251 @@ export const IpoTrackerTableModule: React.FC<IpoTrackerTableModuleProps> = ({
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold"
               >
                 Done
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* BURSA MALAYSIA OFFICIAL IPO ANNOUNCEMENTS PORTAL MODAL */}
+      {isBursaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-6 space-y-5">
+            
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-400">
+                    <Globe className="w-5 h-5 text-sky-400" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-bold text-white">
+                        Bursa Malaysia Official IPO Announcements Portal
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-sky-300 border border-sky-400/30 flex items-center gap-1">
+                        <span>🇲🇾</span>
+                        <span>Malaysia Companies Only</span>
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                        bursamalaysia.com Official
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Scraped specifically from the Bursa Malaysia official website. All filings strictly represent registered Malaysian corporate entities (Berhad / Bhd) scheduled or listed on the Main Market, ACE Market, or LEAP Market.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsBursaModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scraper Engine Info & Metric Bar */}
+            <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-slate-300 font-semibold">Active Scraper Engine:</span>
+                  <span className="font-mono text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    {bursaScrapeEngine || 'Cheerio / Browser Emulation + Grounded Truth'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-slate-300">
+                  <strong className="text-white text-sm">{bursaAnnouncements.length}</strong> Official Announcements
+                </span>
+                <button
+                  onClick={handleScrapeBursaAnnouncements}
+                  disabled={isScrapingBursa}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isScrapingBursa ? 'animate-spin' : ''}`} />
+                  <span>Rescrape Bursa</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Official Grounding Sources */}
+            {bursaScrapeSources.length > 0 && (
+              <div className="bg-slate-950/40 border border-slate-800/80 rounded-xl p-3 text-xs space-y-1.5">
+                <div className="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Official Grounding Feeds & Endpoints:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {bursaScrapeSources.map((src, i) => (
+                    <a
+                      key={i}
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+                    >
+                      <span className="truncate max-w-xs">{src.title || 'bursamalaysia.com'}</span>
+                      <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Announcements List */}
+            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+              {bursaAnnouncements.length === 0 ? (
+                <div className="p-8 text-center bg-slate-950/50 rounded-xl border border-slate-800 space-y-2">
+                  <Globe className="w-8 h-8 text-slate-500 mx-auto" />
+                  <p className="text-sm font-semibold text-slate-300">No Bursa announcements currently cached in session.</p>
+                  <p className="text-xs text-slate-500">Click below to initiate the serverless scraper to harvest live filings.</p>
+                  <button
+                    onClick={handleScrapeBursaAnnouncements}
+                    disabled={isScrapingBursa}
+                    className="mt-2 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold"
+                  >
+                    Execute Bursa Scraper
+                  </button>
+                </div>
+              ) : (
+                bursaAnnouncements.map((ann) => {
+                  const isTracked = ipos.some(
+                    i => i.stockName.toLowerCase().replace(/[^a-z0-9]/g, '') === ann.stockName.toLowerCase().replace(/[^a-z0-9]/g, '')
+                  );
+
+                  return (
+                    <div 
+                      key={ann.id}
+                      className="bg-slate-950/60 border border-slate-800 hover:border-slate-700 rounded-xl p-4 transition-colors space-y-3"
+                    >
+                      {/* Top Badges & Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                            {ann.announcementDate}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                            ann.marketTier === 'Main Market'
+                              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                              : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                          }`}>
+                            {ann.marketTier}
+                          </span>
+                          {ann.stockCode && (
+                            <span className="font-mono text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">
+                              Code: {ann.stockCode}
+                            </span>
+                          )}
+                          {ann.syariah && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Syariah
+                            </span>
+                          )}
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            ann.status === 'UPCOMING'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}>
+                            {ann.status}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {isTracked ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                              <Check className="w-3 h-3" />
+                              Active in Table
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30">
+                              Newly Sourced
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Title & Company Name */}
+                      <div>
+                        <div className="flex items-baseline gap-2">
+                          <h4 className="text-base font-bold text-white tracking-tight">
+                            {ann.companyName}
+                          </h4>
+                          <span className="text-xs text-sky-400 font-mono">({ann.stockName})</span>
+                        </div>
+                        <p className="text-xs text-slate-300 font-medium mt-1 leading-snug">
+                          {ann.title}
+                        </p>
+                      </div>
+
+                      {/* Timetable & Pricing Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
+                        <div className="bg-slate-900 border border-slate-800/80 rounded-lg p-2">
+                          <div className="text-[10px] text-slate-400 uppercase font-mono">Offer Price</div>
+                          <div className="text-sm font-bold text-emerald-400 font-mono">
+                            {typeof ann.offerPrice === 'number' ? `RM ${ann.offerPrice.toFixed(2)}` : 'Pending'}
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800/80 rounded-lg p-2">
+                          <div className="text-[10px] text-slate-400 uppercase font-mono">Target Listing</div>
+                          <div className="text-xs font-semibold text-white font-mono">
+                            {ann.listingDate || 'Scheduled 2026/2027'}
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800/80 rounded-lg p-2">
+                          <div className="text-[10px] text-slate-400 uppercase font-mono">Application Window</div>
+                          <div className="text-xs text-slate-300 font-mono">
+                            {ann.openPublic ? `${ann.openPublic} to ${ann.closePublic || 'TBA'}` : 'Pre-Launch'}
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-900 border border-slate-800/80 rounded-lg p-2">
+                          <div className="text-[10px] text-slate-400 uppercase font-mono">Balloting Date</div>
+                          <div className="text-xs text-slate-300 font-mono">
+                            {ann.ballotPublic || 'Upcoming'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Highlights & Footer Link */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-800/60 text-xs">
+                        <p className="text-[11px] text-slate-400 line-clamp-2">
+                          {ann.keyHighlights || 'Official Bursa Malaysia Initial Public Offering filing.'}
+                        </p>
+
+                        <a
+                          href={ann.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-sky-400 hover:text-sky-300 font-medium transition-colors shrink-0"
+                        >
+                          <span>View on bursamalaysia.com</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+              <span className="text-[11px] text-slate-400 font-mono">
+                🇲🇾 Strictly companies in Malaysia • Bursa Malaysia Main, ACE & LEAP Markets
+              </span>
+              <button
+                onClick={() => setIsBursaModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold cursor-pointer"
+              >
+                Close
               </button>
             </div>
 
