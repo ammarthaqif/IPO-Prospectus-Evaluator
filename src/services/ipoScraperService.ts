@@ -766,8 +766,8 @@ export function clearAutoCrawlLogs(): void {
   }
 }
 
-import { isMalaysianIpo } from './ipoStorage';
-export { isMalaysianIpo };
+import { isMalaysianIpo, isPublicListedIpo } from './ipoStorage';
+export { isMalaysianIpo, isPublicListedIpo };
 
 /**
  * Crawls and scrapes web research reports, news, and broker notes for a single IPO.

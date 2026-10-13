@@ -16,7 +16,7 @@ import {
   Cloud
 } from 'lucide-react';
 import { ProspectusDossier } from '../types';
-import { goldLiProspectus, scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from '../data/defaultProspectus';
+import { goldLiProspectus, scaSolutionsProspectus, stratusGlobalProspectus } from '../data/defaultProspectus';
 import { checkDuplicateProspectus, DuplicateCheckResult } from '../utils/dossierStorage';
 import { checkCloudDuplicate } from '../services/firebase';
 import { ensureIpoValuationAndShariah } from '../utils/ipoPricingAndShariah';

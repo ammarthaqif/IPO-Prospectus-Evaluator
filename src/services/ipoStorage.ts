@@ -51,8 +51,45 @@ export function isMalaysianIpo(item: Partial<TrackedIpoItem>): boolean {
 }
 
 /**
- * Loads tracked IPOs from localStorage, strictly removing any non-Malaysian company,
- * and falling back to default IPOs from spreadsheet.
+ * Verifies if a Malaysian company has debuted and is publicly listed on Bursa Malaysia.
+ */
+export function isPublicListedIpo(item: Partial<TrackedIpoItem>): boolean {
+  if (!item) return false;
+  if (!isMalaysianIpo(item)) return false;
+
+  // If status is PAST_LISTED, it has completed listing
+  if (item.status === 'PAST_LISTED') return true;
+  if (item.status === 'UPCOMING') return false;
+
+  // Check 9am open status: GAIN / FAIL / PAR indicates it has debuted
+  if (item.nineAmOpen?.status === 'GAIN' || item.nineAmOpen?.status === 'FAIL' || item.nineAmOpen?.status === 'PAR') {
+    return true;
+  }
+  if (item.nineAmOpen?.status === 'PENDING') return false;
+
+  // Check text indicators
+  const notes = `${item.notes || ''} ${item.nineAmOpen?.text || ''}`.toLowerCase();
+  if (notes.includes('upcoming') || notes.includes('yet to be listed') || notes.includes('pending') || notes.includes('scheduled')) {
+    return false;
+  }
+
+  return false;
+}
+
+/**
+ * Verifies if a Malaysian company is yet to be listed on Bursa Malaysia (upcoming/scheduled).
+ */
+export function isYetToBeListedIpo(item: Partial<TrackedIpoItem>): boolean {
+  if (!item) return false;
+  if (!isMalaysianIpo(item)) return false;
+  return item.status === 'UPCOMING' || !isPublicListedIpo(item);
+}
+
+/**
+ * Loads tracked IPOs from localStorage.
+ * Strictly removes any non-Malaysian company.
+ * Retains both publicly listed Malaysian companies AND yet-to-be-listed (upcoming)
+ * Malaysian companies to be listed on Bursa Malaysia.
  */
 export function loadStoredTrackedIpos(): TrackedIpoItem[] {
   if (typeof window === 'undefined') return DEFAULT_TRACKED_IPOS;
@@ -64,13 +101,15 @@ export function loadStoredTrackedIpos(): TrackedIpoItem[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Strictly remove any IPO that is not a Malaysian company to be listed on Bursa Malaysia
+      // Strictly keep ONLY Malaysian companies to be listed or listed on Bursa Malaysia
       const malaysianOnly = parsed.filter(item => isMalaysianIpo(item));
       const processed = malaysianOnly.map(item => {
         const defaultMatch = DEFAULT_TRACKED_IPOS.find(d => d.id === item.id);
+        const resolvedStatus = item.status || defaultMatch?.status || (isPublicListedIpo(item) ? 'PAST_LISTED' : 'UPCOMING');
         return {
           ...defaultMatch,
           ...item,
+          status: resolvedStatus,
           fairValues: {
             ...(defaultMatch?.fairValues || {}),
             ...(item.fairValues || {}),
@@ -82,12 +121,17 @@ export function loadStoredTrackedIpos(): TrackedIpoItem[] {
         };
       });
 
-      // If non-Malaysian items were purged, immediately persist the clean list
-      if (processed.length !== parsed.length) {
-        saveStoredTrackedIpos(processed);
+      // Ensure any default Malaysian IPOs (both listed and upcoming) are present
+      const existingIds = new Set(processed.map(p => p.id));
+      const missingDefaults = DEFAULT_TRACKED_IPOS.filter(d => !existingIds.has(d.id));
+      const completeList = [...processed, ...missingDefaults];
+
+      // If items changed or non-Malaysian were purged, persist the clean complete list
+      if (completeList.length !== parsed.length) {
+        saveStoredTrackedIpos(completeList);
       }
 
-      return processed.length > 0 ? processed : DEFAULT_TRACKED_IPOS;
+      return completeList.length > 0 ? completeList : DEFAULT_TRACKED_IPOS;
     }
   } catch (err) {
     console.warn('[IpoStorage] Error reading stored IPOs:', err);
@@ -96,7 +140,8 @@ export function loadStoredTrackedIpos(): TrackedIpoItem[] {
 }
 
 /**
- * Saves tracked IPOs to localStorage, strictly enforcing Malaysian companies only
+ * Saves tracked IPOs to localStorage, strictly enforcing Malaysian companies on Bursa Malaysia only.
+ * Allows both publicly listed and yet-to-be-listed Malaysian companies.
  */
 export function saveStoredTrackedIpos(ipos: TrackedIpoItem[]): void {
   if (typeof window === 'undefined') return;

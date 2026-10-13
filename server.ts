@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import * as cheerio from 'cheerio';
-import { goldLiProspectus, scaSolutionsProspectus, sampleSaaSProspectus, stratusGlobalProspectus } from './src/data/defaultProspectus.ts';
+import { goldLiProspectus, scaSolutionsProspectus, stratusGlobalProspectus } from './src/data/defaultProspectus.ts';
 
 dotenv.config();
 
